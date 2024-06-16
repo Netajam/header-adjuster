@@ -1,96 +1,118 @@
-# Obsidian Sample Plugin
+# Header Adjuster Plugin for Obsidian
 
-This is a sample plugin for Obsidian (https://obsidian.md).
+## Overview
 
-This project uses Typescript to provide type checking and documentation.
-The repo depends on the latest plugin API (obsidian.d.ts) in Typescript Definition format, which contains TSDoc comments describing what it does.
+The Header Adjuster Plugin for Obsidian allows users to easily adjust the levels of headers in their Markdown documents. Users can increase or decrease header levels by a specified number of levels, either for the entire document or within a specified range of lines. The plugin also provides convenient default settings for header adjustments.
 
-**Note:** The Obsidian API is still in early alpha and is subject to change at any time!
+## Features
 
-This sample plugin demonstrates some of the basic functionality the plugin API can do.
-- Adds a ribbon icon, which shows a Notice when clicked.
-- Adds a command "Open Sample Modal" which opens a Modal.
-- Adds a plugin setting tab to the settings page.
-- Registers a global click event and output 'click' to the console.
-- Registers a global interval which logs 'setInterval' to the console.
+- Increase header levels by a specified number.
+- Decrease header levels by a specified number.
+- Adjust headers within a specified range of lines.
+- Use default settings for header adjustments.
+- Commands accessible from the command palette.
+- Ribbon icon with options for increasing or decreasing header levels.
 
-## First time developing plugins?
+## Installation
 
-Quick starting guide for new plugin devs:
+1. Download the plugin files (`main.js` and `manifest.json`).
+2. Place the files in your Obsidian vault's `.obsidian/plugins/obsidian-header-adjuster` directory.
+3. Enable the Header Adjuster Plugin from the Obsidian Settings under the "Community plugins" section.
 
-- Check if [someone already developed a plugin for what you want](https://obsidian.md/plugins)! There might be an existing plugin similar enough that you can partner up with.
-- Make a copy of this repo as a template with the "Use this template" button (login to GitHub if you don't see it).
-- Clone your repo to a local development folder. For convenience, you can place this folder in your `.obsidian/plugins/your-plugin-name` folder.
-- Install NodeJS, then run `npm i` in the command line under your repo folder.
-- Run `npm run dev` to compile your plugin from `main.ts` to `main.js`.
-- Make changes to `main.ts` (or create new `.ts` files). Those changes should be automatically compiled into `main.js`.
-- Reload Obsidian to load the new version of your plugin.
-- Enable plugin in settings window.
-- For updates to the Obsidian API run `npm update` in the command line under your repo folder.
+## Usage
 
-## Releasing new releases
+### Commands
 
-- Update your `manifest.json` with your new version number, such as `1.0.1`, and the minimum Obsidian version required for your latest release.
-- Update your `versions.json` file with `"new-plugin-version": "minimum-obsidian-version"` so older versions of Obsidian can download an older version of your plugin that's compatible.
-- Create new GitHub release using your new version number as the "Tag version". Use the exact version number, don't include a prefix `v`. See here for an example: https://github.com/obsidianmd/obsidian-sample-plugin/releases
-- Upload the files `manifest.json`, `main.js`, `styles.css` as binary attachments. Note: The manifest.json file must be in two places, first the root path of your repository and also in the release.
-- Publish the release.
+The plugin provides the following commands accessible from the command palette:
 
-> You can simplify the version bump process by running `npm version patch`, `npm version minor` or `npm version major` after updating `minAppVersion` manually in `manifest.json`.
-> The command will bump version in `manifest.json` and `package.json`, and add the entry for the new version to `versions.json`
+- **Increase Header Level**: Opens a modal to increase header levels by a specified number of levels.
+- **Decrease Header Level**: Opens a modal to decrease header levels by a specified number of levels.
+- **Increase Header Level (Default)**: Increases header levels by the default number of levels specified in the settings.
+- **Decrease Header Level (Default)**: Decreases header levels by the default number of levels specified in the settings.
 
-## Adding your plugin to the community plugin list
+### Ribbon Icon
 
-- Check https://github.com/obsidianmd/obsidian-releases/blob/master/plugin-review.md
-- Publish an initial version.
-- Make sure you have a `README.md` file in the root of your repo.
-- Make a pull request at https://github.com/obsidianmd/obsidian-releases to add your plugin.
+Clicking the ribbon icon opens a context menu with options to:
 
-## How to use
+- Increase Header Level
+- Decrease Header Level
 
-- Clone this repo.
-- Make sure your NodeJS is at least v16 (`node --version`).
-- `npm i` or `yarn` to install dependencies.
-- `npm run dev` to start compilation in watch mode.
+### Modal Input
 
-## Manually installing the plugin
+When using the Increase Header Level or Decrease Header Level commands, a modal will prompt you to:
 
-- Copy over `main.js`, `styles.css`, `manifest.json` to your vault `VaultFolder/.obsidian/plugins/your-plugin-id/`.
+1. Enter the number of levels to increase or decrease (or leave blank to use the default setting).
+2. Optionally specify the start line number.
+3. Optionally specify the end line number.
 
-## Improve code quality with eslint (optional)
-- [ESLint](https://eslint.org/) is a tool that analyzes your code to quickly find problems. You can run ESLint against your plugin to find common bugs and ways to improve your code. 
-- To use eslint with this project, make sure to install eslint from terminal:
-  - `npm install -g eslint`
-- To use eslint to analyze this project use this command:
-  - `eslint main.ts`
-  - eslint will then create a report with suggestions for code improvement by file and line number.
-- If your source code is in a folder, such as `src`, you can use eslint with this command to analyze all files in that folder:
-  - `eslint .\src\`
+### Settings
 
-## Funding URL
+Access the plugin settings from the Obsidian Settings under the "Header Adjuster" section:
 
-You can include funding URLs where people who use your plugin can financially support it.
+- **Default Increase Level**: The default number of levels to increase headers by.
+- **Default Decrease Level**: The default number of levels to decrease headers by.
 
-The simple way is to set the `fundingUrl` field to your link in your `manifest.json` file:
+### Example Usage
 
-```json
-{
-    "fundingUrl": "https://buymeacoffee.com"
-}
-```
+#### Full Document Adjustment
 
-If you have multiple URLs, you can also do:
+To increase all headers in a document by 2 levels:
 
-```json
-{
-    "fundingUrl": {
-        "Buy Me a Coffee": "https://buymeacoffee.com",
-        "GitHub Sponsor": "https://github.com/sponsors",
-        "Patreon": "https://www.patreon.com/"
-    }
-}
-```
+1. Open the command palette (`Ctrl+P` or `Cmd+P`).
+2. Select "Increase Header Level".
+3. Enter `2` in the modal and click "Submit".
 
-## API Documentation
+#### Range Adjustment
 
-See https://github.com/obsidianmd/obsidian-api
+To decrease headers from line 5 to line 20 by 1 level:
+
+1. Open the command palette (`Ctrl+P` or `Cmd+P`).
+2. Select "Decrease Header Level".
+3. Enter `1` in the modal.
+4. Enter `5` for the start line.
+5. Enter `20` for the end line.
+6. Click "Submit".
+
+#### Using Default Settings
+
+To increase headers using the default setting:
+
+1. Open the command palette (`Ctrl+P` or `Cmd+P`).
+2. Select "Increase Header Level (Default)".
+
+To decrease headers using the default setting:
+
+1. Open the command palette (`Ctrl+P` or `Cmd+P`).
+2. Select "Decrease Header Level (Default)".
+
+## Development
+
+For developers interested in contributing to the plugin:
+
+### Setup
+
+1. Clone the repository.
+2. Install dependencies: `npm install`.
+3. Build the plugin: `npm run build`.
+
+### Code Structure
+
+- **main.ts**: Main plugin code including command registration and header adjustment logic.
+- **HeaderAdjusterSettingTab**: Class for managing plugin settings.
+- **LevelInputModal**: Class for the modal to input header adjustment details.
+
+### Building
+
+After making changes, run `npm run build` to compile the TypeScript code to JavaScript.
+
+### Contributing
+
+Contributions are welcome! Please submit issues and pull requests on the GitHub repository.
+
+## License
+
+This plugin is licensed under the MIT License.
+
+---
+
+This documentation provides an overview of the plugin, installation instructions, usage examples, and development guidelines. Feel free to include additional details or examples as needed.

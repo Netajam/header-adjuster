@@ -1,134 +1,267 @@
-import { App, Editor, MarkdownView, Modal, Notice, Plugin, PluginSettingTab, Setting } from 'obsidian';
+import { App, Modal, Notice, Plugin, PluginSettingTab, Setting, MarkdownView, Editor, Menu } from 'obsidian';
 
-// Remember to rename these classes and interfaces!
-
-interface MyPluginSettings {
-	mySetting: string;
+interface HeaderAdjusterSettings {
+  increaseLevel: number;
+  decreaseLevel: number;
 }
 
-const DEFAULT_SETTINGS: MyPluginSettings = {
-	mySetting: 'default'
+const DEFAULT_SETTINGS: HeaderAdjusterSettings = {
+  increaseLevel: 1,
+  decreaseLevel: 1
+};
+
+class HeaderObject {
+  level: number;
+  lineNumber: number;
+  parent: HeaderObject | null;
+  children: HeaderObject[];
+
+  constructor(level: number, lineNumber: number, parent: HeaderObject | null) {
+    this.level = level;
+    this.lineNumber = lineNumber;
+    this.parent = parent;
+    this.children = [];
+  }
 }
 
-export default class MyPlugin extends Plugin {
-	settings: MyPluginSettings;
+export default class HeaderAdjusterPlugin extends Plugin {
+  settings: HeaderAdjusterSettings;
 
-	async onload() {
-		await this.loadSettings();
+  async onload() {
+    await this.loadSettings();
 
-		// This creates an icon in the left ribbon.
-		const ribbonIconEl = this.addRibbonIcon('dice', 'Sample Plugin', (evt: MouseEvent) => {
-			// Called when the user clicks the icon.
-			new Notice('This is a notice!');
-		});
-		// Perform additional things with the ribbon
-		ribbonIconEl.addClass('my-plugin-ribbon-class');
+    const ribbonIconEl = this.addRibbonIcon('heading', 'Adjust Headers', (event) => {
+      const menu = new Menu();
+      menu.addItem((item) =>
+        item.setTitle('Increase Header Level').onClick(() => this.openLevelInputModal('increase'))
+      );
+      menu.addItem((item) =>
+        item.setTitle('Decrease Header Level').onClick(() => this.openLevelInputModal('decrease'))
+      );
+      menu.showAtMouseEvent(event);
+    });
 
-		// This adds a status bar item to the bottom of the app. Does not work on mobile apps.
-		const statusBarItemEl = this.addStatusBarItem();
-		statusBarItemEl.setText('Status Bar Text');
+    this.addCommand({
+      id: 'increase-header-level',
+      name: 'Increase Header Level',
+      callback: () => this.openLevelInputModal('increase')
+    });
 
-		// This adds a simple command that can be triggered anywhere
-		this.addCommand({
-			id: 'open-sample-modal-simple',
-			name: 'Open sample modal (simple)',
-			callback: () => {
-				new SampleModal(this.app).open();
-			}
-		});
-		// This adds an editor command that can perform some operation on the current editor instance
-		this.addCommand({
-			id: 'sample-editor-command',
-			name: 'Sample editor command',
-			editorCallback: (editor: Editor, view: MarkdownView) => {
-				console.log(editor.getSelection());
-				editor.replaceSelection('Sample Editor Command');
-			}
-		});
-		// This adds a complex command that can check whether the current state of the app allows execution of the command
-		this.addCommand({
-			id: 'open-sample-modal-complex',
-			name: 'Open sample modal (complex)',
-			checkCallback: (checking: boolean) => {
-				// Conditions to check
-				const markdownView = this.app.workspace.getActiveViewOfType(MarkdownView);
-				if (markdownView) {
-					// If checking is true, we're simply "checking" if the command can be run.
-					// If checking is false, then we want to actually perform the operation.
-					if (!checking) {
-						new SampleModal(this.app).open();
-					}
+    this.addCommand({
+      id: 'decrease-header-level',
+      name: 'Decrease Header Level',
+      callback: () => this.openLevelInputModal('decrease')
+    });
 
-					// This command will only show up in Command Palette when the check function returns true
-					return true;
-				}
-			}
-		});
+    this.addCommand({
+      id: 'increase-header-level-default',
+      name: 'Increase Header Level (Default)',
+      callback: () => this.adjustHeaders('increase', this.settings.increaseLevel, null, null)
+    });
 
-		// This adds a settings tab so the user can configure various aspects of the plugin
-		this.addSettingTab(new SampleSettingTab(this.app, this));
+    this.addCommand({
+      id: 'decrease-header-level-default',
+      name: 'Decrease Header Level (Default)',
+      callback: () => this.adjustHeaders('decrease', this.settings.decreaseLevel, null, null)
+    });
 
-		// If the plugin hooks up any global DOM events (on parts of the app that doesn't belong to this plugin)
-		// Using this function will automatically remove the event listener when this plugin is disabled.
-		this.registerDomEvent(document, 'click', (evt: MouseEvent) => {
-			console.log('click', evt);
-		});
+    this.addSettingTab(new HeaderAdjusterSettingTab(this.app, this));
+  }
 
-		// When registering intervals, this function will automatically clear the interval when the plugin is disabled.
-		this.registerInterval(window.setInterval(() => console.log('setInterval'), 5 * 60 * 1000));
-	}
+  async loadSettings() {
+    this.settings = Object.assign({}, DEFAULT_SETTINGS, await this.loadData());
+  }
 
-	onunload() {
+  async saveSettings() {
+    await this.saveData(this.settings);
+  }
 
-	}
+  openLevelInputModal(operation: 'increase' | 'decrease') {
+    const modal = new LevelInputModal(this.app, (levels, startLine, endLine) => {
+      if (isNaN(levels)) {
+        levels = operation === 'increase' ? this.settings.increaseLevel : this.settings.decreaseLevel;
+      }
+      this.adjustHeaders(operation, levels, startLine, endLine);
+    }, operation, this.settings);
+    modal.open();
+  }
 
-	async loadSettings() {
-		this.settings = Object.assign({}, DEFAULT_SETTINGS, await this.loadData());
-	}
+  adjustHeaders(operation: 'increase' | 'decrease', levels: number, startLine: number | null, endLine: number | null) {
+    const activeLeaf = this.app.workspace.activeLeaf;
+    if (!activeLeaf) {
+      new Notice("No active editor found");
+      return;
+    }
 
-	async saveSettings() {
-		await this.saveData(this.settings);
-	}
+    const view = activeLeaf.view as MarkdownView;
+    if (view.getViewType() !== 'markdown') {
+      new Notice("Active view is not a markdown file");
+      return;
+    }
+
+    const editor = view.editor;
+    if (!editor) {
+      new Notice("No editor found");
+      return;
+    }
+
+    const headerObjects = this.createHeaderObjects(editor, startLine, endLine);
+
+    if (operation === 'increase') {
+      headerObjects.reverse();
+    }
+
+    this.updateHeaderLevels(headerObjects, operation, levels);
+
+    this.applyHeaderChanges(editor, headerObjects);
+  }
+
+  createHeaderObjects(editor: Editor, startLine: number | null, endLine: number | null): HeaderObject[] {
+    const headerPattern = /^(#{1,6})\s(.*)$/;
+    const headerObjects: HeaderObject[] = [];
+    let lastHeader: HeaderObject | null = null;
+
+    for (let i = 0; i < editor.lineCount(); i++) {
+      if ((startLine !== null && i + 1 < startLine) || (endLine !== null && i + 1 > endLine)) {
+        continue;
+      }
+
+      const line = editor.getLine(i);
+      const match = line.match(headerPattern);
+
+      if (match) {
+        const currentLevel = match[1].length;
+        const newHeader = new HeaderObject(currentLevel, i + 1, null);
+
+        if (lastHeader && currentLevel > lastHeader.level) {
+          newHeader.parent = lastHeader;
+          lastHeader.children.push(newHeader);
+        } else if (lastHeader) {
+          let parent = lastHeader.parent;
+          while (parent && parent.level >= currentLevel) {
+            parent = parent.parent;
+          }
+          newHeader.parent = parent;
+          if (parent) {
+            parent.children.push(newHeader);
+          }
+        }
+
+        headerObjects.push(newHeader);
+        lastHeader = newHeader;
+      }
+    }
+
+    return headerObjects;
+  }
+
+  updateHeaderLevels(headerObjects: HeaderObject[], operation: 'increase' | 'decrease', levels: number) {
+    headerObjects.forEach(header => {
+      if (operation === 'decrease') {
+        let newLevel = header.level - levels;
+        if (header.parent && newLevel <= header.parent.level) {
+          newLevel = header.parent.level + 1;
+        }
+        header.level = Math.max(newLevel, 1);
+      } else if (operation === 'increase') {
+        let newLevel = header.level + levels;
+        header.children.forEach(child => {
+          if (newLevel >= child.level) {
+            newLevel = child.level - 1;
+          }
+        });
+        header.level = Math.min(newLevel, 6);
+      }
+    });
+  }
+
+  applyHeaderChanges(editor: Editor, headerObjects: HeaderObject[]) {
+    headerObjects.forEach(header => {
+      const line = editor.getLine(header.lineNumber - 1);
+      const newHeader = '#'.repeat(header.level) + ' ' + line.replace(/^(#{1,6})\s/, '');
+      editor.replaceRange(newHeader, { line: header.lineNumber - 1, ch: 0 }, { line: header.lineNumber - 1, ch: line.length });
+    });
+  }
 }
 
-class SampleModal extends Modal {
-	constructor(app: App) {
-		super(app);
-	}
+class LevelInputModal extends Modal {
+  onSubmit: (levels: number, startLine: number | null, endLine: number | null) => void;
+  operation: 'increase' | 'decrease';
+  settings: HeaderAdjusterSettings;
 
-	onOpen() {
-		const {contentEl} = this;
-		contentEl.setText('Woah!');
-	}
+  constructor(app: App, onSubmit: (levels: number, startLine: number | null, endLine: number | null) => void, operation: 'increase' | 'decrease', settings: HeaderAdjusterSettings) {
+    super(app);
+    this.onSubmit = onSubmit;
+    this.operation = operation;
+    this.settings = settings;
+  }
 
-	onClose() {
-		const {contentEl} = this;
-		contentEl.empty();
-	}
+  onOpen() {
+    let { contentEl } = this;
+    contentEl.setText(`Enter the number of levels to ${this.operation} (or leave blank for default):`);
+
+    const inputLevels = contentEl.createEl('input', { type: 'number', placeholder: `${this.operation === 'increase' ? this.settings.increaseLevel : this.settings.decreaseLevel}` });
+    inputLevels.focus();
+
+    contentEl.createEl('br');
+    contentEl.createEl('label', { text: 'Start Line (optional):' });
+    const inputStartLine = contentEl.createEl('input', { type: 'number', placeholder: 'Start Line' });
+
+    contentEl.createEl('br');
+    contentEl.createEl('label', { text: 'End Line (optional):' });
+    const inputEndLine = contentEl.createEl('input', { type: 'number', placeholder: 'End Line' });
+
+    contentEl.createEl('button', { text: 'Submit' }).addEventListener('click', () => {
+      const levels = parseInt(inputLevels.value);
+      const startLine = inputStartLine.value ? parseInt(inputStartLine.value) : null;
+      const endLine = inputEndLine.value ? parseInt(inputEndLine.value) : null;
+      this.onSubmit(levels, startLine, endLine);
+      this.close();
+    });
+  }
+
+  onClose() {
+    let { contentEl } = this;
+    contentEl.empty();
+  }
 }
 
-class SampleSettingTab extends PluginSettingTab {
-	plugin: MyPlugin;
+class HeaderAdjusterSettingTab extends PluginSettingTab {
+  plugin: HeaderAdjusterPlugin;
 
-	constructor(app: App, plugin: MyPlugin) {
-		super(app, plugin);
-		this.plugin = plugin;
-	}
+  constructor(app: App, plugin: HeaderAdjusterPlugin) {
+    super(app, plugin);
+    this.plugin = plugin;
+  }
 
-	display(): void {
-		const {containerEl} = this;
+  display(): void {
+    const { containerEl } = this;
 
-		containerEl.empty();
+    containerEl.empty();
+    containerEl.createEl('h2', { text: 'Header Adjuster Settings' });
 
-		new Setting(containerEl)
-			.setName('Setting #1')
-			.setDesc('It\'s a secret')
-			.addText(text => text
-				.setPlaceholder('Enter your secret')
-				.setValue(this.plugin.settings.mySetting)
-				.onChange(async (value) => {
-					this.plugin.settings.mySetting = value;
-					await this.plugin.saveSettings();
-				}));
-	}
-}
+    new Setting(containerEl)
+      .setName('Default Increase Level')
+      .setDesc('The default level to increase headers by.')
+      .addSlider(slider => slider
+        .setLimits(1, 6, 1)
+        .setValue(this.plugin.settings.increaseLevel)
+        .setDynamicTooltip()
+        .onChange(async (value) => {
+          this.plugin.settings.increaseLevel = value;
+          await this.plugin.saveSettings();
+        }));
+
+    new Setting(containerEl)
+      .setName('Default Decrease Level')
+      .setDesc('The default level to decrease headers by.')
+      .addSlider(slider =>slider
+		.setLimits(1, 6, 1)
+		.setValue(this.plugin.settings.decreaseLevel)
+		.setDynamicTooltip()
+		.onChange(async (value) => {
+		this.plugin.settings.decreaseLevel = value;
+		await this.plugin.saveSettings();
+		}));
+		}
+		}
