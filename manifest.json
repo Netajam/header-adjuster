@@ -3,7 +3,7 @@
 	"name": "Header Adjuster",
 	"version": "1.0.0",
 	"minAppVersion": "0.15.0",
-	"description": "A plugin for Obsidian that allows users to easily increase or decrease header levels in their Markdown documents. Supports adjustments for the entire document or specified line ranges, with convenient default settings and commands.",
+	"description": "Easily adjust header levels in Markdown documents by increasing or decreasing their levels. Supports full document adjustments or specified line ranges, with default settings and commands for convenience",
 	"author": "Valentin Pelletier",
 	"authorUrl": "https://infiniterollo.com",
 	"fundingUrl": "https://buymeacoffee.com/vpt87",
