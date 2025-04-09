@@ -1,15 +1,15 @@
-import { Editor,Notice, EditorPosition } from 'obsidian';
+import { Editor, Notice, EditorPosition } from 'obsidian';
 
 export type AdjustmentOperation = 'increase' | 'decrease';
 
 // Represents a header found in the document
 export class HeaderObject {
-  level: number; 
-  originalLevel: number; 
-  lineNumber: number;
-  content: string; 
-  parent: HeaderObject | null; 
-  children: HeaderObject[]; 
+  level: number;
+  originalLevel: number;
+  lineNumber: number; // 1-based line number
+  content: string;
+  parent: HeaderObject | null;
+  children: HeaderObject[];
 
   constructor(level: number, lineNumber: number, content: string, parent: HeaderObject | null) {
     this.level = level;
@@ -83,39 +83,32 @@ export function parseHeaders(editor: Editor, fromLine: number, toLine: number): 
  * @param levels The number of levels to adjust by.
  */
 export function updateHeaderLevels(headers: HeaderObject[], operation: AdjustmentOperation, levels: number): void {
-    // It's crucial to process decreases top-down and increases bottom-up
-    // to correctly handle parent/child level constraints *within the processed set*.
     const sortedHeaders = (operation === 'decrease')
-        ? headers // Process in found order (top-down)
-        : [...headers].reverse(); // Process reversed order (bottom-up)
+        ? headers
+        : [...headers].reverse();
 
     sortedHeaders.forEach(header => {
         let newLevel: number;
         if (operation === 'decrease') {
             newLevel = header.originalLevel - levels;
-            // Constraint: Cannot be lower than level 1
-            newLevel = Math.max(1, newLevel);
-            // Constraint: Cannot be equal to or lower than its *processed* parent's level
-            // Note: parent's level might have already been adjusted if processing top-down
+            newLevel = Math.max(1, newLevel); // Min level is 1
+            // Adjust if trying to go below parent level
             if (header.parent && newLevel <= header.parent.level) {
                  newLevel = header.parent.level + 1;
             }
-            // Final check against max level (although decreasing shouldn't hit this)
-            header.level = Math.min(newLevel, 6);
+            header.level = Math.min(newLevel, 6); // Ensure level is not > 6 (max header level)
 
         } else { // increase
             newLevel = header.originalLevel + levels;
-            // Constraint: Cannot be higher than level 6
-             newLevel = Math.min(6, newLevel);
-            // Constraint: Cannot be equal to or higher than its *processed* child's level
-            // Note: children's levels might have already been adjusted if processing bottom-up
+            newLevel = Math.min(6, newLevel); // Max level is 6
+            // Adjust if trying to go above child level
             header.children.forEach(child => {
+                // Compare with the *already potentially adjusted* child level
                 if (newLevel >= child.level) {
                     newLevel = child.level - 1;
                 }
             });
-            // Final check against min level (increasing shouldn't hit this unless child constraint triggers)
-            header.level = Math.max(1, newLevel);
+             header.level = Math.max(1, newLevel); // Ensure level is not < 1
         }
     });
 }
@@ -127,24 +120,40 @@ export function updateHeaderLevels(headers: HeaderObject[], operation: Adjustmen
  */
 export function applyHeaderChanges(editor: Editor, headers: HeaderObject[]): void {
     // Apply changes from bottom to top to avoid messing up line numbers
-    // for subsequent changes in the same transaction.
     const sortedHeaders = [...headers].sort((a, b) => b.lineNumber - a.lineNumber);
 
-    editor.transaction({
-        changes: sortedHeaders.map(header => {
-            // Only apply if the level actually changed
-            if (header.level === header.originalLevel) {
-                return null; // Return null or undefined for no change
-            }
-            const newHeaderPrefix = '#'.repeat(header.level) + ' ';
-            const lineIndex = header.lineNumber - 1; // 0-based index
-            return {
-                from: { line: lineIndex, ch: 0 },
-                to: { line: lineIndex, ch: header.originalLevel }, // Replace old '#'s
-                text: newHeaderPrefix
-            };
-        }).filter(change => change !== null) // Filter out null changes
+    // 1. Create the array of potential change objects
+    const potentialChanges = sortedHeaders.map(header => {
+        // Only create a change object if the level actually changed
+        if (header.level === header.originalLevel) {
+            return null; // Indicate no change needed for this header
+        }
+        const newHeaderPrefix = '#'.repeat(header.level) + ' ';
+        const lineIndex = header.lineNumber - 1; // 0-based index for editor lines
+        // The change replaces the old '#' prefix with the new one
+        return {
+            from: { line: lineIndex, ch: 0 },
+            to: { line: lineIndex, ch: header.originalLevel }, // Replace old '#'s length
+            text: newHeaderPrefix
+        };
     });
+
+    // 2. Filter out the null values to get only the actual changes needed
+    // The type predicate `change is Exclude<typeof change, null>` tells TypeScript
+    // that the resulting array is guaranteed not to contain null.
+    const actualChanges = potentialChanges.filter(
+        (change): change is Exclude<typeof change, null> => change !== null
+    );
+
+    // 3. Only execute the transaction if there are changes to apply
+    if (actualChanges.length > 0) {
+        console.log("[Header Adjuster] Applying changes:", actualChanges); // Optional: log the changes
+        editor.transaction({
+            changes: actualChanges // Pass the filtered array of valid EditorChange objects
+        });
+    } else {
+        console.log("[Header Adjuster] No header level changes to apply.");
+    }
 }
 
 /**
@@ -162,21 +171,34 @@ export function processHeaderAdjustment(
     fromLine?: number,
     toLine?: number
 ): void {
+    // Default to full document range if fromLine/toLine are not provided (or are undefined/null)
     const startLine = fromLine ?? 0;
     const endLine = toLine ?? editor.lineCount() - 1;
 
+    // Basic range sanity check
     if (startLine > endLine) {
         console.warn("[Header Adjuster] Start line is after end line, skipping adjustment.");
         return;
     }
+     if (levels === 0) {
+         console.log("[Header Adjuster] Adjustment level is 0, skipping.");
+         return;
+     }
+     if (levels < 0) {
+         console.warn("[Header Adjuster] Adjustment level is negative, skipping.");
+         return;
+     }
+
 
     // 1. Parse headers within the specified range
+    console.log(`[Header Adjuster] Parsing headers from line ${startLine + 1} to ${endLine + 1}`);
     const headersInRange = parseHeaders(editor, startLine, endLine);
 
     if (headersInRange.length === 0) {
         new Notice("No headers found in the specified range/selection.");
         return;
     }
+    console.log(`[Header Adjuster] Found ${headersInRange.length} headers in range.`);
 
     // 2. Calculate the new levels (mutates header objects)
     updateHeaderLevels(headersInRange, operation, levels);
@@ -184,5 +206,11 @@ export function processHeaderAdjustment(
     // 3. Apply the changes back to the editor
     applyHeaderChanges(editor, headersInRange);
 
-    new Notice(`Adjusted ${headersInRange.filter(h => h.level !== h.originalLevel).length} header(s).`);
+    // Count how many actually changed
+    const changedCount = headersInRange.filter(h => h.level !== h.originalLevel).length;
+    if (changedCount > 0) {
+        new Notice(`Adjusted ${changedCount} header(s).`);
+    } else {
+        new Notice(`No header levels needed adjustment in the range.`);
+    }
 }
