@@ -128,7 +128,7 @@ export function applyHeaderChanges(editor: Editor, headers: HeaderObject[]): voi
         if (header.level === header.originalLevel) {
             return null; // Indicate no change needed for this header
         }
-        const newHeaderPrefix = '#'.repeat(header.level) + ' ';
+        const newHeaderPrefix = '#'.repeat(header.level);
         const lineIndex = header.lineNumber - 1; // 0-based index for editor lines
         // The change replaces the old '#' prefix with the new one
         return {
