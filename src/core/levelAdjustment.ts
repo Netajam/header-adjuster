@@ -30,11 +30,17 @@ export interface AdjustableHeading {
  * — parents first when decreasing, children first when increasing.
  *
  * Mutates `level` on the given headings; `originalLevel` is left untouched.
+ *
+ * @param allowOverflow Lets an increase settle above the ceiling instead of
+ *   clamping to it. Levels then stay ordered in a space that continues past
+ *   `######`, which is what keeps a parent and child that both overflow from
+ *   collapsing onto the same level before either becomes a bullet.
  */
 export function assignAdjustedLevels(
   headings: readonly AdjustableHeading[],
   operation: AdjustmentOperation,
-  levels: number
+  levels: number,
+  allowOverflow = false
 ): void {
   const order = operation === 'decrease' ? headings : [...headings].reverse();
 
@@ -42,7 +48,7 @@ export function assignAdjustedLevels(
     heading.level =
       operation === 'decrease'
         ? decreasedLevel(heading, levels)
-        : increasedLevel(heading, levels);
+        : increasedLevel(heading, levels, allowOverflow);
   }
 }
 
@@ -57,9 +63,19 @@ function decreasedLevel(heading: AdjustableHeading, levels: number): number {
   return Math.min(level, MAX_HEADING_LEVEL);
 }
 
+/** How far past the ceiling a level sits. Zero when it still fits. */
+export function overflowDepth(level: number): number {
+  return Math.max(0, level - MAX_HEADING_LEVEL);
+}
+
 /** The level a heading sinks to, never reaching its (already moved) children. */
-function increasedLevel(heading: AdjustableHeading, levels: number): number {
-  let level = Math.min(MAX_HEADING_LEVEL, heading.originalLevel + levels);
+function increasedLevel(
+  heading: AdjustableHeading,
+  levels: number,
+  allowOverflow: boolean
+): number {
+  const target = heading.originalLevel + levels;
+  let level = allowOverflow ? target : Math.min(MAX_HEADING_LEVEL, target);
 
   for (const child of heading.children) {
     if (level >= child.level) {

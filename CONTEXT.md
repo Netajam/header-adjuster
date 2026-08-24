@@ -38,11 +38,16 @@ column.
 Rewriting a heading that overflows the ceiling as a list item, indenting its
 section body beneath it so the content stays inside the item.
 
+**Heading conversion**:
+The inverse — rewriting a list item as a heading, de-indenting its content back
+out. Only **decrease** does this, and only when explicitly enabled.
+
 ## Relationships
 
 - A **heading** owns exactly one **section body**, possibly empty
 - An **overflow** of _n_ maps to a bullet indented _n − 1_ levels deep
-- **Bullet conversion** is triggered only by **increase**, never by **decrease**
+- **Increase** performs **bullet conversion**; **decrease** performs **heading
+  conversion**. Neither is enabled by default
 
 ## Example dialogue
 
@@ -52,6 +57,11 @@ section body beneath it so the content stays inside the item.
 > **Dev:** "So the **section body** moves with it. And going back the other way?"
 > **Outliner:** "That's the awkward bit — you can't tell my hand-written lists
 > apart from the ones you made."
+
+## See also
+
+`docs/architecture.md` describes how `src/` is shaped and which rules the build
+enforces. This file is about the words; that one is about the structure.
 
 ## Flagged ambiguities
 

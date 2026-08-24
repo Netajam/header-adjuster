@@ -17,6 +17,10 @@ import { HeaderAdjusterSettingTab } from './settingsTab';
 const DEFAULT_SETTINGS: HeaderAdjusterSettings = {
   increaseLevel: 1,
   decreaseLevel: 1,
+  // Both off: each rewrites more than a heading line, so neither is something
+  // to start doing to an existing vault without being asked.
+  headingsToBullets: false,
+  bulletsToHeadings: false,
 };
 
 /** The stored settings, with anything missing filled in from the defaults. */

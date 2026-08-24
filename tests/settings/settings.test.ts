@@ -10,7 +10,12 @@ function pluginStoring(data: unknown) {
 
 describe('defaultLevelFor', () => {
   test('picks the shift configured for the direction being asked about', () => {
-    const settings = { increaseLevel: 2, decreaseLevel: 3 };
+    const settings = {
+      increaseLevel: 2,
+      decreaseLevel: 3,
+      headingsToBullets: false,
+      bulletsToHeadings: false,
+    };
 
     assert.equal(defaultLevelFor(settings, 'increase'), 2);
     assert.equal(defaultLevelFor(settings, 'decrease'), 3);
@@ -22,13 +27,24 @@ describe('readSettings', () => {
     assert.deepEqual(await readSettings(pluginStoring(null)), {
       increaseLevel: 1,
       decreaseLevel: 1,
+      headingsToBullets: false,
+      bulletsToHeadings: false,
     });
+  });
+
+  test('a conversion the user switched on survives a reload', async () => {
+    const stored = await readSettings(pluginStoring({ bulletsToHeadings: true }));
+
+    assert.equal(stored.bulletsToHeadings, true);
+    assert.equal(stored.headingsToBullets, false);
   });
 
   test('stored values win over the defaults', async () => {
     assert.deepEqual(await readSettings(pluginStoring({ increaseLevel: 4 })), {
       increaseLevel: 4,
       decreaseLevel: 1,
+      headingsToBullets: false,
+      bulletsToHeadings: false,
     });
   });
 });

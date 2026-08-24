@@ -1,5 +1,5 @@
 import type { Editor } from 'obsidian';
-import type { AdjustmentOperation } from '../contracts';
+import type { AdjustmentOperation, ConversionSettings } from '../contracts';
 import type { RejectionReason } from '../core/adjustHeadings';
 import { Notice } from 'obsidian';
 import { adjustHeadings } from '../core/adjustHeadings';
@@ -16,6 +16,7 @@ import { applyLineEdits, readEditorLines, selectedLineRange } from './editorDocu
 const LOG_PREFIX = '[Header Adjuster]';
 
 /**
+ * @param conversion Which overflow conversions the user has switched on.
  * @param fromLine First 0-based line to adjust. Defaults to the document start.
  * @param toLine Last 0-based line to adjust, inclusive. Defaults to the end.
  */
@@ -23,12 +24,14 @@ export function adjustEditorHeadings(
   editor: Editor,
   operation: AdjustmentOperation,
   levels: number,
+  conversion: ConversionSettings,
   fromLine?: number,
   toLine?: number
 ): void {
   const outcome = adjustHeadings(readEditorLines(editor), {
     operation,
     levels,
+    conversion,
     fromLine,
     toLine,
   });
@@ -39,7 +42,7 @@ export function adjustEditorHeadings(
   }
 
   applyLineEdits(editor, outcome.edits);
-  reportAdjusted(outcome.changedCount);
+  reportAdjusted(outcome.changedCount, outcome.truncatedSections);
 }
 
 /**
@@ -51,14 +54,15 @@ export function adjustEditorHeadings(
 export function adjustEditorSelection(
   editor: Editor,
   operation: AdjustmentOperation,
-  levels: number
+  levels: number,
+  conversion: ConversionSettings
 ): void {
   const range = selectedLineRange(editor);
   if (!range) {
     return;
   }
 
-  adjustEditorHeadings(editor, operation, levels, range.fromLine, range.toLine);
+  adjustEditorHeadings(editor, operation, levels, conversion, range.fromLine, range.toLine);
 }
 
 /** A request that could not mean anything: a log for us, a notice for the user. */
@@ -79,10 +83,24 @@ function reportRejection(reason: RejectionReason): void {
   }
 }
 
-function reportAdjusted(changedCount: number): void {
-  new Notice(
-    changedCount > 0
-      ? `Adjusted ${changedCount} header(s).`
-      : 'No header levels needed adjustment in the range.'
-  );
+/**
+ * What happened, in the user's terms.
+ *
+ * A section cut short by the range is called out rather than left to be
+ * discovered: the selection stopped the indentation partway, and half an
+ * indented section is not something to find out about later.
+ */
+function reportAdjusted(changedCount: number, truncatedSections: number): void {
+  if (changedCount === 0) {
+    new Notice('No header levels needed adjustment in the range.');
+    return;
+  }
+
+  const cut =
+    truncatedSections > 0
+      ? ` ${truncatedSections} section(s) continued past the selection;` +
+        ' only the selected lines were indented.'
+      : '';
+
+  new Notice(`Adjusted ${changedCount} header(s).${cut}`);
 }

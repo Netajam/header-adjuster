@@ -11,11 +11,13 @@ import { Heading, matchHeadingLevel } from './heading';
  * @param lines The whole document, one entry per line.
  * @param fromLine First 0-based line to read, clamped to the document.
  * @param toLine Last 0-based line to read (inclusive), clamped to the document.
+ * @param fenced Lines inside a code fence, which are text rather than markup.
  */
 export function parseHeadings(
   lines: readonly string[],
   fromLine = 0,
-  toLine: number = lines.length - 1
+  toLine: number = lines.length - 1,
+  fenced: readonly boolean[] = []
 ): Heading[] {
   const headings: Heading[] = [];
   const start = Math.max(0, fromLine);
@@ -23,7 +25,7 @@ export function parseHeadings(
   let previous: Heading | null = null;
 
   for (let index = start; index <= end; index++) {
-    const level = matchHeadingLevel(lines[index]);
+    const level = fenced[index] ? null : matchHeadingLevel(lines[index]);
     if (level === null) {
       continue;
     }
@@ -35,6 +37,21 @@ export function parseHeadings(
   }
 
   return headings;
+}
+
+/**
+ * Which lines open a new section: the headings, minus anything inside a fence.
+ *
+ * A section's body runs until the next of these, so this is what stops a `#`
+ * written inside a code block from cutting a section in half.
+ */
+export function headingBoundaries(
+  lines: readonly string[],
+  fenced: readonly boolean[]
+): boolean[] {
+  return lines.map(
+    (line, index) => !fenced[index] && matchHeadingLevel(line) !== null
+  );
 }
 
 /**

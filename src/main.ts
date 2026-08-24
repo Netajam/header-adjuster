@@ -1,5 +1,6 @@
 import type {
   AdjustmentOperation,
+  ConversionSettings,
   HeaderAdjusterSettings,
   SettingsHost,
 } from './contracts';
@@ -46,5 +47,10 @@ export default class HeaderAdjusterPlugin extends Plugin implements SettingsHost
   /** How far to shift by default in this direction. Satisfies `CommandContext`. */
   defaultLevel(operation: AdjustmentOperation): number {
     return defaultLevelFor(this.settings, operation);
+  }
+
+  /** Which conversions are switched on. Also satisfies `CommandContext`. */
+  conversion(): ConversionSettings {
+    return this.settings;
   }
 }

@@ -1,8 +1,11 @@
-import type { AdjustmentOperation } from '../contracts';
+import type { AdjustmentOperation, ConversionSettings } from '../contracts';
 import type { HeadingEdit } from './headingEdits';
+import { collectBulletEdits } from './bulletConversion';
+import { collectHeadingConversionEdits } from './headingConversion';
 import { collectHeadingEdits } from './headingEdits';
-import { parseHeadings } from './headingTree';
-import { assignAdjustedLevels } from './levelAdjustment';
+import { computeFencedLines } from './fencedLines';
+import { headingBoundaries, parseHeadings } from './headingTree';
+import { assignAdjustedLevels, overflowDepth } from './levelAdjustment';
 
 /**
  * The whole adjustment, as a function of text — and the door into `core/`.
@@ -13,7 +16,6 @@ import { assignAdjustedLevels } from './levelAdjustment';
  * and never need to name anything behind this file.
  */
 
-
 /** What the user asked for: a direction, a distance, and the lines it applies to. */
 export interface AdjustmentRequest {
   operation: AdjustmentOperation;
@@ -22,6 +24,8 @@ export interface AdjustmentRequest {
   fromLine?: number;
   /** Last 0-based line to adjust, inclusive. Defaults to the end of the document. */
   toLine?: number;
+  /** Which overflow conversions to apply. Both are off when omitted. */
+  conversion?: ConversionSettings;
 }
 
 /** Why an adjustment produced nothing. Each reason is reported differently. */
@@ -32,7 +36,13 @@ export type RejectionReason =
   | 'no-headings';
 
 export type AdjustmentOutcome =
-  | { status: 'adjusted'; edits: HeadingEdit[]; changedCount: number }
+  | {
+      status: 'adjusted';
+      edits: HeadingEdit[];
+      changedCount: number;
+      /** Sections whose body ran past the range and was only partly indented. */
+      truncatedSections: number;
+    }
   | { status: 'rejected'; reason: RejectionReason };
 
 export function adjustHeadings(
@@ -47,17 +57,50 @@ export function adjustHeadings(
     return { status: 'rejected', reason: rejection };
   }
 
-  const headings = parseHeadings(lines, fromLine, toLine);
-  if (headings.length === 0) {
+  const fenced = computeFencedLines(lines);
+  const boundaries = headingBoundaries(lines, fenced);
+  const headings = parseHeadings(lines, fromLine, toLine, fenced);
+
+  const conversion = request.conversion;
+  const toBullets = request.operation === 'increase' && conversion?.headingsToBullets === true;
+  assignAdjustedLevels(headings, request.operation, request.levels, toBullets);
+
+  // A heading pushed past the ceiling is written as a bullet instead, so it
+  // must not also be written back as a `#` run seven characters long.
+  const overflowing = headings.filter((heading) => overflowDepth(heading.level) > 0);
+  const bullets = collectBulletEdits(
+    lines,
+    overflowing.map((heading) => ({
+      lineNumber: heading.lineNumber,
+      originalLevel: heading.originalLevel,
+      depth: overflowDepth(heading.level) - 1,
+    })),
+    boundaries,
+    toLine
+  );
+
+  const headingsBack =
+    request.operation === 'decrease' && conversion?.bulletsToHeadings === true
+      ? collectHeadingConversionEdits(lines, boundaries, fenced, request.levels, fromLine, toLine)
+      : { edits: [], changedCount: 0 };
+
+  const kept = headings.filter((heading) => overflowDepth(heading.level) === 0);
+  const edits = [...collectHeadingEdits(kept), ...bullets.edits, ...headingsBack.edits];
+
+  if (edits.length === 0 && headings.length === 0) {
     return { status: 'rejected', reason: 'no-headings' };
   }
 
-  assignAdjustedLevels(headings, request.operation, request.levels);
-
   return {
     status: 'adjusted',
-    edits: collectHeadingEdits(headings),
-    changedCount: headings.filter((heading) => heading.hasChanged).length,
+    // Bottom-up, so an editor applying them in order never invalidates a line
+    // number it has not reached yet.
+    edits: edits.sort((a, b) => b.line - a.line),
+    changedCount:
+      kept.filter((heading) => heading.hasChanged).length +
+      overflowing.length +
+      headingsBack.changedCount,
+    truncatedSections: bullets.truncatedSections,
   };
 }
 

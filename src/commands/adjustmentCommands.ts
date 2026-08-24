@@ -1,5 +1,5 @@
 import type { App, Editor } from 'obsidian';
-import type { AdjustmentOperation } from '../contracts';
+import type { AdjustmentOperation, ConversionSettings } from '../contracts';
 import { Notice } from 'obsidian';
 import {
   adjustEditorHeadings,
@@ -23,6 +23,8 @@ import { LevelInputModal } from '../ui/levelInputModal';
 export interface CommandContext {
   readonly app: App;
   defaultLevel(operation: AdjustmentOperation): number;
+  /** Which overflow conversions are switched on, for the same reason. */
+  conversion(): ConversionSettings;
 }
 
 /** Asks for a shift and a range, then adjusts what the user named. */
@@ -42,6 +44,7 @@ export function promptForAdjustment(
           editor,
           operation,
           levels ?? defaultLevel,
+          context.conversion(),
           startLine ? startLine - 1 : 0,
           endLine ? endLine - 1 : undefined
         );
@@ -58,7 +61,7 @@ export function adjustActiveDocument(
 ): void {
   const editor = requireActiveEditor(context);
   if (editor) {
-    adjustEditorHeadings(editor, operation, levels);
+    adjustEditorHeadings(editor, operation, levels, context.conversion());
   }
 }
 
@@ -68,7 +71,7 @@ export function adjustSelection(
   editor: Editor,
   operation: AdjustmentOperation
 ): void {
-  adjustEditorSelection(editor, operation, context.defaultLevel(operation));
+  adjustEditorSelection(editor, operation, context.defaultLevel(operation), context.conversion());
 }
 
 /** Adjusts the active selection, or explains why it cannot. */
