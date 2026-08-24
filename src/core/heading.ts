@@ -1,8 +1,23 @@
 /**
+ * What a heading is: the scale Markdown defines, and one line read against it.
+ */
+
+/** `#` — the shallowest Markdown heading. */
+export const MIN_HEADING_LEVEL = 1;
+
+/** `######` — the deepest heading Markdown defines. */
+export const MAX_HEADING_LEVEL = 6;
+
+/**
  * An ATX heading line: between MIN_HEADING_LEVEL and MAX_HEADING_LEVEL `#`,
  * whitespace, then the heading text.
  */
 const HEADING_PATTERN = /^(#{1,6})\s+(.*)$/;
+
+/** The `#` prefix a heading of this level is written with. */
+export function headingPrefix(level: number): string {
+  return '#'.repeat(level);
+}
 
 /** What a heading line says, before it is placed in a document. */
 export interface HeadingMatch {

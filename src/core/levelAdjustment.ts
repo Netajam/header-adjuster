@@ -1,6 +1,6 @@
+import type { AdjustmentOperation } from '../adjustmentOperation';
 import type { Heading } from './heading';
-import type { AdjustmentOperation } from './operations';
-import { MAX_HEADING_LEVEL, MIN_HEADING_LEVEL } from './operations';
+import { MAX_HEADING_LEVEL, MIN_HEADING_LEVEL } from './heading';
 
 /**
  * Moves every heading by `levels`, keeping the tree's nesting intact.
@@ -18,8 +18,7 @@ export function assignAdjustedLevels(
   operation: AdjustmentOperation,
   levels: number
 ): void {
-  const order =
-    operation === 'decrease' ? headings : [...headings].reverse();
+  const order = operation === 'decrease' ? headings : [...headings].reverse();
 
   for (const heading of order) {
     heading.level =

@@ -1,4 +1,4 @@
-import type { AdjustmentOperation } from '../core/operations';
+import type { AdjustmentOperation } from '../adjustmentOperation';
 
 /** The preferences a user can set for the plugin. */
 export interface HeaderAdjusterSettings {

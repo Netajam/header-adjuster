@@ -1,6 +1,6 @@
 // Types only: this module must stay loadable — and testable — without Obsidian.
 import type { Editor, EditorChange } from 'obsidian';
-import type { HeadingEdit } from '../core/headingEdits';
+import type { HeadingEdit } from '../core/adjustHeadings';
 
 /**
  * The translation between an Obsidian editor and the plain lines the core works

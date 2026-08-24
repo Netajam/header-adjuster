@@ -1,9 +1,9 @@
 import type { Editor } from 'obsidian';
 import type { RejectionReason } from '../core/adjustHeadings';
-import type { AdjustmentOperation } from '../core/operations';
+import type { AdjustmentOperation } from '../adjustmentOperation';
 import { Notice } from 'obsidian';
 import { adjustHeadings } from '../core/adjustHeadings';
-import { applyEditsToEditor, readEditorLines } from './editorDocument';
+import { applyEditsToEditor, readEditorLines, selectedLineRange } from './editorDocument';
 
 const LOG_PREFIX = '[Header Adjuster]';
 
@@ -38,6 +38,25 @@ export function adjustEditorHeadings(
 
   applyEditsToEditor(editor, outcome.edits);
   reportAdjusted(outcome.changedCount);
+}
+
+/**
+ * Adjusts only the headings inside the editor's current selection.
+ *
+ * Working out which lines are selected is this layer's job, not the caller's —
+ * which is why `selectedLineRange` never has to leave the folder.
+ */
+export function adjustEditorSelection(
+  editor: Editor,
+  operation: AdjustmentOperation,
+  levels: number
+): void {
+  const range = selectedLineRange(editor);
+  if (!range) {
+    return;
+  }
+
+  adjustEditorHeadings(editor, operation, levels, range.fromLine, range.toLine);
 }
 
 /** A request that could not mean anything: a log for us, a notice for the user. */

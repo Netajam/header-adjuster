@@ -1,12 +1,24 @@
-import type { Plugin } from 'obsidian';
-import type { CommandContext } from './commandContext';
+import type { Editor, Plugin } from 'obsidian';
+import type { AdjustmentOperation } from '../adjustmentOperation';
+import type { CommandContext } from './adjustmentCommands';
 import { Menu } from 'obsidian';
 import { defaultLevelFor } from '../settings/settingsModel';
 import {
   adjustActiveDocument,
   adjustActiveSelection,
+  adjustSelection,
   promptForAdjustment,
 } from './adjustmentCommands';
+
+/**
+ * Every way a user can reach the plugin, registered in one call.
+ *
+ * The ribbon menu and the command palette offer the same three things in each
+ * direction — prompt, whole document, selection — so both are described as data
+ * over the pair rather than written out six times each.
+ */
+
+const OPERATIONS: AdjustmentOperation[] = ['increase', 'decrease'];
 
 const SEPARATOR = 'separator' as const;
 
@@ -18,10 +30,56 @@ interface MenuAction {
 
 type MenuEntry = MenuAction | typeof SEPARATOR;
 
-/** Adds the ribbon icon that opens the adjustment menu. */
-export function registerRibbonMenu(plugin: Plugin, context: CommandContext): void {
+/** The single door into this folder: everything `onload` has to hook up. */
+export function registerCommandSurfaces(
+  plugin: Plugin,
+  context: CommandContext
+): void {
   plugin.addRibbonIcon('heading', 'Adjust headers', (event) => {
     buildRibbonMenu(context).showAtMouseEvent(event);
+  });
+
+  for (const operation of OPERATIONS) {
+    registerCommandsFor(plugin, context, operation);
+  }
+}
+
+/** Title-case verb for command names: 'increase' → 'Increase'. */
+function verb(operation: AdjustmentOperation): string {
+  return operation === 'increase' ? 'Increase' : 'Decrease';
+}
+
+function registerCommandsFor(
+  plugin: Plugin,
+  context: CommandContext,
+  operation: AdjustmentOperation
+): void {
+  const levels = defaultLevelFor(context.settings, operation);
+
+  plugin.addCommand({
+    id: `${operation}-header-level`,
+    name: `${verb(operation)} header level...`,
+    callback: () => promptForAdjustment(context, operation),
+  });
+
+  plugin.addCommand({
+    id: `${operation}-header-level-default`,
+    name: `${verb(operation)} header level by ${levels} (entire document)`,
+    callback: () => adjustActiveDocument(context, operation),
+  });
+
+  plugin.addCommand({
+    id: `${operation}-header-level-selection-default`,
+    name: `${verb(operation)} header level in selection by ${levels}`,
+    editorCheckCallback: (checking: boolean, editor: Editor) => {
+      if (!editor.somethingSelected()) {
+        return false;
+      }
+      if (!checking) {
+        adjustSelection(context, editor, operation);
+      }
+      return true;
+    },
   });
 }
 
@@ -31,7 +89,7 @@ export function registerRibbonMenu(plugin: Plugin, context: CommandContext): voi
  * Read top to bottom it is the whole feature surface: prompt for a shift, nudge
  * the document by one, or apply the configured defaults to a selection.
  */
-export function ribbonMenuEntries(context: CommandContext): MenuEntry[] {
+function ribbonMenuEntries(context: CommandContext): MenuEntry[] {
   const increaseBy = defaultLevelFor(context.settings, 'increase');
   const decreaseBy = defaultLevelFor(context.settings, 'decrease');
 

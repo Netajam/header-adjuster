@@ -1,34 +1,26 @@
-import type { CommandContext } from './commands/commandContext';
-import type {
-  HeaderAdjusterSettings,
-  SettingsHost,
-} from './settings/settingsModel';
+import type { HeaderAdjusterSettings, SettingsHost } from './settings/settingsModel';
 import { Plugin } from 'obsidian';
-import { registerHeaderAdjusterCommands } from './commands/registerCommands';
-import { registerRibbonMenu } from './commands/ribbonMenu';
+import { registerCommandSurfaces } from './commands/commandSurfaces';
 import { DEFAULT_SETTINGS } from './settings/settingsModel';
 import { HeaderAdjusterSettingTab } from './settings/settingsTab';
 
 /**
  * The entry point, and nothing else.
  *
- * It owns the settings and hands itself to the pieces that need them — as a
- * `CommandContext` to the command surfaces, as a `SettingsHost` to the settings
- * tab. Those pieces know only the interface, which is what keeps this file at
- * the top of the dependency graph instead of in a loop with them.
+ * It owns the settings and hands itself to the pieces that need them. Those
+ * pieces ask for an interface rather than for this class — `CommandContext` in
+ * `commands/`, `SettingsHost` in `settings/` — which is what keeps this file at
+ * the top of the dependency graph instead of in a loop with them. Passing
+ * `this` below is where TypeScript checks it still satisfies both.
  */
-export default class HeaderAdjusterPlugin
-  extends Plugin
-  implements CommandContext, SettingsHost
-{
+export default class HeaderAdjusterPlugin extends Plugin implements SettingsHost {
   settings: HeaderAdjusterSettings;
 
   async onload(): Promise<void> {
     console.log('Loading Header Adjuster Plugin');
     await this.loadSettings();
 
-    registerRibbonMenu(this, this);
-    registerHeaderAdjusterCommands(this, this);
+    registerCommandSurfaces(this, this);
     this.addSettingTab(new HeaderAdjusterSettingTab(this.app, this));
   }
 

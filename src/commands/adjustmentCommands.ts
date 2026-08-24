@@ -1,9 +1,11 @@
-import type { Editor } from 'obsidian';
-import type { AdjustmentOperation } from '../core/operations';
-import type { CommandContext } from './commandContext';
+import type { App, Editor } from 'obsidian';
+import type { AdjustmentOperation } from '../adjustmentOperation';
+import type { HeaderAdjusterSettings } from '../settings/settingsModel';
 import { Notice } from 'obsidian';
-import { selectedLineRange } from '../editor/editorDocument';
-import { adjustEditorHeadings } from '../editor/headingAdjustmentService';
+import {
+  adjustEditorHeadings,
+  adjustEditorSelection,
+} from '../editor/headingAdjustmentService';
 import { defaultLevelFor } from '../settings/settingsModel';
 import { LevelInputModal } from '../ui/levelInputModal';
 
@@ -11,6 +13,18 @@ import { LevelInputModal } from '../ui/levelInputModal';
  * The things a user can ask for, independent of how they asked — the ribbon
  * menu and the command palette both land here.
  */
+
+/**
+ * All a command needs from the plugin: somewhere to find the active editor, and
+ * the user's default shifts.
+ *
+ * Commands depend on this interface rather than on the plugin class, so the
+ * entry point can depend on the commands without the two importing each other.
+ */
+export interface CommandContext {
+  readonly app: App;
+  readonly settings: HeaderAdjusterSettings;
+}
 
 /** Asks for a shift and a range, then adjusts what the user named. */
 export function promptForAdjustment(
@@ -56,17 +70,10 @@ export function adjustSelection(
   editor: Editor,
   operation: AdjustmentOperation
 ): void {
-  const range = selectedLineRange(editor);
-  if (!range) {
-    return;
-  }
-
-  adjustEditorHeadings(
+  adjustEditorSelection(
     editor,
     operation,
-    defaultLevelFor(context.settings, operation),
-    range.fromLine,
-    range.toLine
+    defaultLevelFor(context.settings, operation)
   );
 }
 
@@ -85,7 +92,7 @@ export function adjustActiveSelection(
 }
 
 /** The editor the user is in, or null after telling them there isn't one. */
-export function requireActiveEditor(context: CommandContext): Editor | null {
+function requireActiveEditor(context: CommandContext): Editor | null {
   const editor = context.app.workspace.activeEditor?.editor;
   if (!editor) {
     new Notice('No active editor found.');

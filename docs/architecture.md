@@ -11,40 +11,48 @@ above it, so there are no cycles anywhere in `src/`.
 
 | Folder | Depends on | Holds |
 | --- | --- | --- |
-| `src/core/` | — | The whole adjustment, as a function of text. No Obsidian import. |
-| `src/settings/` | `core` | The user's preferences, and the tab that edits them. |
+| `src/adjustmentOperation.ts` | — | `'increase' \| 'decrease'`. The one word every layer says. |
+| `src/core/` | the word above | The whole adjustment, as a function of text. No Obsidian import. |
+| `src/settings/` | the word above | The user's preferences, and the tab that edits them. |
 | `src/editor/` | `core` | The Obsidian `Editor` adapter, and the one place side effects happen. |
-| `src/ui/` | `core`, `settings` | The level-input dialog and its validation rules. |
-| `src/commands/` | all of the above | What a user can trigger, from the ribbon or the palette. |
+| `src/ui/` | `settings` | The level-input dialog and its validation rules. |
+| `src/commands/` | `editor`, `ui`, `settings` | What a user can trigger, from the ribbon or the palette. |
 | `src/main.ts` | `commands`, `settings` | The entry point, and nothing else. |
 
-### `src/core/` — the decision
+## One door per folder
 
-- `operations.ts` — the shared vocabulary: `AdjustmentOperation`, H1–H6.
-- `heading.ts` — reading one line as a heading; the `Heading` node.
+A folder is easier to trust when outsiders enter it at one point, because that
+point is the only thing that has to stay stable. Two of the folders are shaped
+around this deliberately.
+
+**`core/` is entered only through `adjustHeadings.ts`.** It owns the request,
+the outcome, the edit shape, and the functions that build and apply edits — so
+`editor/` never has to name `heading.ts`, `headingTree.ts` or
+`levelAdjustment.ts`. Those three are core's private working parts.
+
+- `heading.ts` — the H1–H6 scale, reading one line as a heading, the `Heading` node.
 - `headingTree.ts` — reading a slice of a document into a heading tree.
 - `levelAdjustment.ts` — moving levels while keeping the nesting intact.
-- `headingEdits.ts` — turning moved headings into line edits.
-- `adjustHeadings.ts` — the composition of the four above, and the entry point
-  every caller uses.
+- `adjustHeadings.ts` — the door: `adjustHeadings(lines, request)` in, edits or a
+  rejection reason out.
 
-`adjustHeadings(lines, request)` takes plain strings and returns either the
-edits to apply or a reason it declined. That signature is what makes the
-behaviour testable without standing up Obsidian.
+**`editor/` is entered only through `headingAdjustmentService.ts`.** Working out
+which lines a selection covers is the adapter's job, so `selectedLineRange`
+never leaves the folder; `commands/` asks for `adjustEditorSelection` instead.
+This is also the only place a decision becomes an effect — one undoable
+transaction, and one `Notice`.
 
-### The seam
+`AdjustmentOperation` lives at the root rather than inside `core/` for the same
+reason: while it sat in `core/operations.ts`, four folders reached into `core/`
+for a three-line type, and `core/` had three doors instead of one.
 
-`src/editor/headingAdjustmentService.ts` is the only place where a decision
-becomes an effect: it reads the editor, calls `adjustHeadings`, applies the
-edits in one undoable transaction, and turns the outcome into a `Notice`.
-
-### Breaking the loop with the entry point
+## Breaking the loop with the entry point
 
 `commands/` and `settings/` both need the plugin's settings, and `settings/`
 needs to save them. Rather than importing `main.ts` — which imports them right
 back — each declares what it needs as an interface: `CommandContext` and
-`SettingsHost`. `HeaderAdjusterPlugin` implements both and hands itself over at
-load time.
+`SettingsHost`. `HeaderAdjusterPlugin` implements both, and passing `this` to
+`registerCommandSurfaces` is where TypeScript checks that it still does.
 
 ## Tests
 

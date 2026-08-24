@@ -1,5 +1,5 @@
 import { App, Modal, Notice, Setting } from 'obsidian';
-import type { AdjustmentOperation } from '../core/operations';
+import type { AdjustmentOperation } from '../adjustmentOperation';
 import type { HeaderAdjusterSettings } from '../settings/settingsModel';
 import type { LevelInputSubmission } from './submissionValidation';
 import { defaultLevelFor } from '../settings/settingsModel';
