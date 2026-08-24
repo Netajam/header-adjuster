@@ -1,4 +1,4 @@
-import { readdirSync, readFileSync } from 'node:fs';
+import { existsSync, readdirSync, readFileSync } from 'node:fs';
 import { dirname, join, relative, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import ts from 'typescript';
@@ -100,8 +100,10 @@ function describeImport(statement: ts.Statement, from: string): SourceImport[] {
     return [];
   }
 
-  const target = relative(SRC, resolve(dirname(from), `${specifier.text}.ts`));
-  return [{ to: target, typeOnly: isTypeOnly(statement) }];
+  const base = resolve(dirname(from), specifier.text);
+  const resolved = existsSync(`${base}.ts`) ? `${base}.ts` : `${base}.d.ts`;
+
+  return [{ to: relative(SRC, resolved), typeOnly: isTypeOnly(statement) }];
 }
 
 function isTypeOnly(statement: ts.Statement): boolean {
