@@ -4,7 +4,7 @@ import { strict as assert } from 'node:assert';
 import {
   DEFAULT_SETTINGS,
   defaultLevelFor,
-} from '../../src/settings/settingsModel';
+} from '../../src/settings/settingsDefaults';
 
 describe('defaultLevelFor', () => {
   test('picks the shift configured for the direction being asked about', () => {

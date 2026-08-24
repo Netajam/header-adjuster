@@ -1,32 +1,38 @@
-import { App, Modal, Notice, Setting } from 'obsidian';
-import type { AdjustmentOperation } from '../adjustmentOperation';
-import type { HeaderAdjusterSettings } from '../settings/settingsModel';
-import type { LevelInputSubmission } from './submissionValidation';
-import { defaultLevelFor } from '../settings/settingsModel';
-import { describeProblem } from './submissionValidation';
+import type { App } from 'obsidian';
+import type { AdjustmentOperation } from '../contracts';
+import type { LevelInputSubmission } from './levelInputForm';
+import { Modal, Notice, Setting } from 'obsidian';
+import { LevelInputForm } from './levelInputForm';
 
 export type { LevelInputSubmission };
 
-/** Asks for a shift and an optional line range before adjusting. */
-export class LevelInputModal extends Modal {
-  private readonly onSubmit: (submission: LevelInputSubmission) => void;
-  private readonly operation: AdjustmentOperation;
-  private readonly settings: HeaderAdjusterSettings;
+/** What the dialog needs to describe itself before the user types anything. */
+export interface LevelPrompt {
+  operation: AdjustmentOperation;
+  /** The shift applied when the levels field is left blank. */
+  defaultLevel: number;
+}
 
-  private levelsInput: HTMLInputElement;
-  private startLineInput: HTMLInputElement;
-  private endLineInput: HTMLInputElement;
+/**
+ * Asks for a shift and an optional line range before adjusting — the door
+ * into `ui/`.
+ *
+ * The fields and what they mean belong to `LevelInputForm`; this owns the
+ * frame around them: the title, the two buttons, and when to close.
+ */
+export class LevelInputModal extends Modal {
+  private readonly prompt: LevelPrompt;
+  private readonly onSubmit: (submission: LevelInputSubmission) => void;
+  private form: LevelInputForm;
 
   constructor(
     app: App,
-    onSubmit: (submission: LevelInputSubmission) => void,
-    operation: AdjustmentOperation,
-    settings: HeaderAdjusterSettings
+    prompt: LevelPrompt,
+    onSubmit: (submission: LevelInputSubmission) => void
   ) {
     super(app);
+    this.prompt = prompt;
     this.onSubmit = onSubmit;
-    this.operation = operation;
-    this.settings = settings;
   }
 
   onOpen(): void {
@@ -34,108 +40,38 @@ export class LevelInputModal extends Modal {
     contentEl.empty();
     contentEl.createEl('h3', { text: 'Adjust Header Levels' });
 
-    const defaultLevel = defaultLevelFor(this.settings, this.operation);
-
-    this.levelsInput = this.addNumberField(
-      `Levels to ${this.operation}`,
-      `Leave blank to use default (${defaultLevel})`,
-      String(defaultLevel)
-    );
-    this.levelsInput.focus();
-
-    this.startLineInput = this.addNumberField(
-      'Start line (optional)',
-      'Apply adjustment starting from this line number.',
-      'e.g., 1'
+    this.form = new LevelInputForm(
+      contentEl,
+      this.prompt.operation,
+      this.prompt.defaultLevel,
+      () => this.submit()
     );
 
-    this.endLineInput = this.addNumberField(
-      'End line (optional)',
-      'Apply adjustment up to and including this line number.',
-      'e.g., 50'
-    );
+    new Setting(contentEl)
+      .addButton((button) =>
+        button
+          .setButtonText('Submit')
+          .setCta()
+          .onClick(() => this.submit())
+      )
+      .addButton((button) => button.setButtonText('Cancel').onClick(() => this.close()));
 
-    const submitButton = this.addButtons();
-    for (const input of [this.levelsInput, this.startLineInput, this.endLineInput]) {
-      submitOnEnter(input, submitButton);
-    }
+    this.form.focus();
   }
 
   onClose(): void {
     this.contentEl.empty();
   }
 
-  /** One optional, positive-integer field. */
-  private addNumberField(
-    name: string,
-    description: string,
-    placeholder: string
-  ): HTMLInputElement {
-    let inputEl!: HTMLInputElement;
-
-    new Setting(this.contentEl)
-      .setName(name)
-      .setDesc(description)
-      .addText((text) => {
-        text.inputEl.type = 'number';
-        text.inputEl.min = '1';
-        text.setPlaceholder(placeholder);
-        inputEl = text.inputEl;
-      });
-
-    return inputEl;
-  }
-
-  /** Submit and Cancel, returning the submit button so Enter can reach it. */
-  private addButtons(): HTMLButtonElement {
-    let submitEl!: HTMLButtonElement;
-
-    new Setting(this.contentEl)
-      .addButton((button) => {
-        button
-          .setButtonText('Submit')
-          .setCta()
-          .onClick(() => this.submit());
-        submitEl = button.buttonEl;
-      })
-      .addButton((button) => button.setButtonText('Cancel').onClick(() => this.close()));
-
-    return submitEl;
-  }
-
   private submit(): void {
-    const submission = this.readSubmission();
-    const problem = describeProblem(submission);
+    const reading = this.form.read();
 
-    if (problem) {
-      new Notice(problem);
+    if ('problem' in reading) {
+      new Notice(reading.problem);
       return;
     }
 
-    this.onSubmit(submission);
+    this.onSubmit(reading.submission);
     this.close();
   }
-
-  private readSubmission(): LevelInputSubmission {
-    return {
-      levels: readOptionalNumber(this.levelsInput) ?? undefined,
-      startLine: readOptionalNumber(this.startLineInput),
-      endLine: readOptionalNumber(this.endLineInput),
-    };
-  }
-}
-
-/** Null for a blank field; NaN for a field holding something that is not a number. */
-function readOptionalNumber(input: HTMLInputElement): number | null {
-  return input.value ? parseInt(input.value, 10) : null;
-}
-
-/** Enter in a field is the same as pressing Submit. */
-function submitOnEnter(input: HTMLInputElement, submitButton: HTMLButtonElement): void {
-  input.addEventListener('keydown', (event) => {
-    if (event.key === 'Enter') {
-      event.preventDefault();
-      submitButton.click();
-    }
-  });
 }

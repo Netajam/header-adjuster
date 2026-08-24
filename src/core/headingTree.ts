@@ -1,4 +1,6 @@
-import { Heading, matchHeading } from './heading';
+import { Heading, matchHeadingLevel } from './heading';
+
+export type { Heading };
 
 /**
  * Reads a slice of a document into headings linked into a tree.
@@ -22,12 +24,12 @@ export function parseHeadings(
   let previous: Heading | null = null;
 
   for (let index = start; index <= end; index++) {
-    const match = matchHeading(lines[index]);
-    if (!match) {
+    const level = matchHeadingLevel(lines[index]);
+    if (level === null) {
       continue;
     }
 
-    const heading = new Heading(match.level, index + 1, match.content);
+    const heading = new Heading(level, index + 1);
     linkToTree(heading, previous);
     headings.push(heading);
     previous = heading;

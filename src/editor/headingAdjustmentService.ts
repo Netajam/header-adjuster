@@ -1,19 +1,21 @@
 import type { Editor } from 'obsidian';
+import type { AdjustmentOperation } from '../contracts';
 import type { RejectionReason } from '../core/adjustHeadings';
-import type { AdjustmentOperation } from '../adjustmentOperation';
 import { Notice } from 'obsidian';
 import { adjustHeadings } from '../core/adjustHeadings';
-import { applyEditsToEditor, readEditorLines, selectedLineRange } from './editorDocument';
-
-const LOG_PREFIX = '[Header Adjuster]';
+import { applyLineEdits, readEditorLines, selectedLineRange } from './editorDocument';
 
 /**
- * Runs a heading adjustment against a live editor.
+ * Running a heading adjustment against a live editor — the door into `editor/`.
  *
  * This is the seam between the pure decision (`adjustHeadings`) and the two
  * side effects it implies: writing the edits, and telling the user what
  * happened. Every command surface funnels through here.
- *
+ */
+
+const LOG_PREFIX = '[Header Adjuster]';
+
+/**
  * @param fromLine First 0-based line to adjust. Defaults to the document start.
  * @param toLine Last 0-based line to adjust, inclusive. Defaults to the end.
  */
@@ -36,7 +38,7 @@ export function adjustEditorHeadings(
     return;
   }
 
-  applyEditsToEditor(editor, outcome.edits);
+  applyLineEdits(editor, outcome.edits);
   reportAdjusted(outcome.changedCount);
 }
 

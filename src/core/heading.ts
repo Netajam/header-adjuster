@@ -1,37 +1,20 @@
 /**
- * What a heading is: the scale Markdown defines, and one line read against it.
+ * What a heading is: one line read as a level, and its place in the tree.
+ *
+ * Reached only through `headingTree.ts`, which is the one file that builds
+ * these.
  */
-
-/** `#` — the shallowest Markdown heading. */
-export const MIN_HEADING_LEVEL = 1;
-
-/** `######` — the deepest heading Markdown defines. */
-export const MAX_HEADING_LEVEL = 6;
 
 /**
- * An ATX heading line: between MIN_HEADING_LEVEL and MAX_HEADING_LEVEL `#`,
- * whitespace, then the heading text.
+ * An ATX heading line: one to six `#`, whitespace, then the heading text. The
+ * upper bound here is the same six that `levelAdjustment.ts` clamps to.
  */
-const HEADING_PATTERN = /^(#{1,6})\s+(.*)$/;
+const HEADING_PATTERN = /^(#{1,6})\s+/;
 
-/** The `#` prefix a heading of this level is written with. */
-export function headingPrefix(level: number): string {
-  return '#'.repeat(level);
-}
-
-/** What a heading line says, before it is placed in a document. */
-export interface HeadingMatch {
-  level: number;
-  content: string;
-}
-
-/** Reads a single line as a heading, or reports that it is not one. */
-export function matchHeading(line: string): HeadingMatch | null {
+/** The level of a heading line, or null when the line is not a heading. */
+export function matchHeadingLevel(line: string): number | null {
   const match = line.match(HEADING_PATTERN);
-  if (!match) {
-    return null;
-  }
-  return { level: match[1].length, content: match[2] };
+  return match ? match[1].length : null;
 }
 
 /**
@@ -46,26 +29,14 @@ export class Heading {
   readonly originalLevel: number;
   /** 1-based line number, as shown to the user. */
   readonly lineNumber: number;
-  readonly content: string;
   parent: Heading | null;
   readonly children: Heading[] = [];
 
-  constructor(
-    level: number,
-    lineNumber: number,
-    content: string,
-    parent: Heading | null = null
-  ) {
+  constructor(level: number, lineNumber: number, parent: Heading | null = null) {
     this.level = level;
     this.originalLevel = level;
     this.lineNumber = lineNumber;
-    this.content = content;
     this.parent = parent;
-  }
-
-  /** 0-based index of this heading's line, as document arrays address it. */
-  get lineIndex(): number {
-    return this.lineNumber - 1;
   }
 
   /** True once an adjustment has moved this heading off its written level. */

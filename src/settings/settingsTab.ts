@@ -1,6 +1,9 @@
-import { App, Plugin, PluginSettingTab, Setting } from 'obsidian';
-import type { HeaderAdjusterSettings, SettingsHost } from './settingsModel';
-import { SETTING_LEVEL_RANGE } from './settingsModel';
+import type { App, Plugin } from 'obsidian';
+import type { HeaderAdjusterSettings, SettingsHost } from '../contracts';
+import { PluginSettingTab, Setting } from 'obsidian';
+
+/** The narrowest and largest default shift the settings UI offers. */
+const SETTING_LEVEL_RANGE = { min: 1, max: 5, step: 1 } as const;
 
 export class HeaderAdjusterSettingTab extends PluginSettingTab {
   private readonly host: SettingsHost;

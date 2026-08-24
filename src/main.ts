@@ -1,17 +1,20 @@
-import type { HeaderAdjusterSettings, SettingsHost } from './settings/settingsModel';
+import type {
+  AdjustmentOperation,
+  HeaderAdjusterSettings,
+  SettingsHost,
+} from './contracts';
 import { Plugin } from 'obsidian';
 import { registerCommandSurfaces } from './commands/commandSurfaces';
-import { DEFAULT_SETTINGS } from './settings/settingsModel';
-import { HeaderAdjusterSettingTab } from './settings/settingsTab';
+import { DEFAULT_SETTINGS, defaultLevelFor, installSettingsTab } from './settings/settings';
 
 /**
- * The entry point, and nothing else.
+ * The entry point, and the root of the tree.
  *
- * It owns the settings and hands itself to the pieces that need them. Those
- * pieces ask for an interface rather than for this class — `CommandContext` in
- * `commands/`, `SettingsHost` in `settings/` — which is what keeps this file at
- * the top of the dependency graph instead of in a loop with them. Passing
- * `this` below is where TypeScript checks it still satisfies both.
+ * It owns the settings and hands itself to the two folders below it. Those
+ * folders ask for an interface rather than for this class — `CommandContext`
+ * in `commands/`, `SettingsHost` in `settings/` — which is what keeps this
+ * file at the top of the graph instead of in a loop with them. Passing `this`
+ * below is where TypeScript checks it still satisfies both.
  */
 export default class HeaderAdjusterPlugin extends Plugin implements SettingsHost {
   settings: HeaderAdjusterSettings;
@@ -21,7 +24,7 @@ export default class HeaderAdjusterPlugin extends Plugin implements SettingsHost
     await this.loadSettings();
 
     registerCommandSurfaces(this, this);
-    this.addSettingTab(new HeaderAdjusterSettingTab(this.app, this));
+    installSettingsTab(this);
   }
 
   onunload(): void {
@@ -34,5 +37,10 @@ export default class HeaderAdjusterPlugin extends Plugin implements SettingsHost
 
   async saveSettings(): Promise<void> {
     await this.saveData(this.settings);
+  }
+
+  /** How far to shift by default in this direction. Satisfies `CommandContext`. */
+  defaultLevel(operation: AdjustmentOperation): number {
+    return defaultLevelFor(this.settings, operation);
   }
 }

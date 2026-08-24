@@ -4,14 +4,12 @@ import { strict as assert } from 'node:assert';
 import { parseHeadings } from '../../src/core/headingTree';
 
 describe('parseHeadings', () => {
-  test('records 1-based line numbers and the heading text', () => {
+  test('records the level and a 1-based line number', () => {
     const [heading] = parseHeadings(['prose', '## Title of the section']);
 
     assert.equal(heading.lineNumber, 2);
-    assert.equal(heading.lineIndex, 1);
     assert.equal(heading.level, 2);
     assert.equal(heading.originalLevel, 2);
-    assert.equal(heading.content, 'Title of the section');
   });
 
   test('nests each heading under the nearest shallower heading before it', () => {
@@ -39,11 +37,11 @@ describe('parseHeadings', () => {
   });
 
   test('reads only the requested lines', () => {
-    const headings = parseHeadings(['# A', '# B', '# C'], 1, 1);
+    const headings = parseHeadings(['# A', '## B', '### C'], 1, 1);
 
     assert.deepEqual(
-      headings.map((heading) => heading.content),
-      ['B']
+      headings.map((heading) => heading.lineNumber),
+      [2]
     );
   });
 

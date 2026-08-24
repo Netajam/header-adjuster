@@ -1,8 +1,7 @@
 import type { Editor, Plugin } from 'obsidian';
-import type { AdjustmentOperation } from '../adjustmentOperation';
+import type { AdjustmentOperation } from '../contracts';
 import type { CommandContext } from './adjustmentCommands';
 import { Menu } from 'obsidian';
-import { defaultLevelFor } from '../settings/settingsModel';
 import {
   adjustActiveDocument,
   adjustActiveSelection,
@@ -11,26 +10,16 @@ import {
 } from './adjustmentCommands';
 
 /**
- * Every way a user can reach the plugin, registered in one call.
+ * Every way a user can reach the plugin, registered in one call — the door
+ * into `commands/`.
  *
- * The ribbon menu and the command palette offer the same three things in each
- * direction — prompt, whole document, selection — so both are described as data
- * over the pair rather than written out six times each.
+ * The palette offers the same three things in each direction, so those are
+ * generated from the pair. The ribbon menu is written out, because its order
+ * and its separators are the thing being designed.
  */
 
 const OPERATIONS: AdjustmentOperation[] = ['increase', 'decrease'];
 
-const SEPARATOR = 'separator' as const;
-
-interface MenuAction {
-  title: string;
-  icon: string;
-  run: () => void;
-}
-
-type MenuEntry = MenuAction | typeof SEPARATOR;
-
-/** The single door into this folder: everything `onload` has to hook up. */
 export function registerCommandSurfaces(
   plugin: Plugin,
   context: CommandContext
@@ -54,7 +43,7 @@ function registerCommandsFor(
   context: CommandContext,
   operation: AdjustmentOperation
 ): void {
-  const levels = defaultLevelFor(context.settings, operation);
+  const levels = context.defaultLevel(operation);
 
   plugin.addCommand({
     id: `${operation}-header-level`,
@@ -83,65 +72,37 @@ function registerCommandsFor(
   });
 }
 
-/**
- * The menu, described as data.
- *
- * Read top to bottom it is the whole feature surface: prompt for a shift, nudge
- * the document by one, or apply the configured defaults to a selection.
- */
-function ribbonMenuEntries(context: CommandContext): MenuEntry[] {
-  const increaseBy = defaultLevelFor(context.settings, 'increase');
-  const decreaseBy = defaultLevelFor(context.settings, 'decrease');
-
-  return [
-    {
-      title: 'Increase level...',
-      icon: 'plus-square',
-      run: () => promptForAdjustment(context, 'increase'),
-    },
-    {
-      title: 'Decrease level...',
-      icon: 'minus-square',
-      run: () => promptForAdjustment(context, 'decrease'),
-    },
-    SEPARATOR,
-    {
-      title: 'Increase level by 1 (Document)',
-      icon: 'chevron-up',
-      run: () => adjustActiveDocument(context, 'increase', 1),
-    },
-    {
-      title: 'Decrease level by 1 (Document)',
-      icon: 'chevron-down',
-      run: () => adjustActiveDocument(context, 'decrease', 1),
-    },
-    SEPARATOR,
-    {
-      title: `Increase level by (+${increaseBy}) (Selection)`,
-      icon: 'plus-square',
-      run: () => adjustActiveSelection(context, 'increase'),
-    },
-    {
-      title: `Decrease level by (-${decreaseBy}) (Selection)`,
-      icon: 'minus-square',
-      run: () => adjustActiveSelection(context, 'decrease'),
-    },
-  ];
-}
-
 function buildRibbonMenu(context: CommandContext): Menu {
   const menu = new Menu();
+  const increaseBy = context.defaultLevel('increase');
+  const decreaseBy = context.defaultLevel('decrease');
 
-  for (const entry of ribbonMenuEntries(context)) {
-    if (entry === SEPARATOR) {
-      menu.addSeparator();
-      continue;
-    }
+  addMenuItem(menu, 'Increase level...', 'plus-square', () =>
+    promptForAdjustment(context, 'increase')
+  );
+  addMenuItem(menu, 'Decrease level...', 'minus-square', () =>
+    promptForAdjustment(context, 'decrease')
+  );
+  menu.addSeparator();
 
-    menu.addItem((item) =>
-      item.setTitle(entry.title).setIcon(entry.icon).onClick(entry.run)
-    );
-  }
+  addMenuItem(menu, 'Increase level by 1 (Document)', 'chevron-up', () =>
+    adjustActiveDocument(context, 'increase', 1)
+  );
+  addMenuItem(menu, 'Decrease level by 1 (Document)', 'chevron-down', () =>
+    adjustActiveDocument(context, 'decrease', 1)
+  );
+  menu.addSeparator();
+
+  addMenuItem(menu, `Increase level by (+${increaseBy}) (Selection)`, 'plus-square', () =>
+    adjustActiveSelection(context, 'increase')
+  );
+  addMenuItem(menu, `Decrease level by (-${decreaseBy}) (Selection)`, 'minus-square', () =>
+    adjustActiveSelection(context, 'decrease')
+  );
 
   return menu;
+}
+
+function addMenuItem(menu: Menu, title: string, icon: string, run: () => void): void {
+  menu.addItem((item) => item.setTitle(title).setIcon(icon).onClick(run));
 }

@@ -1,6 +1,24 @@
-import type { AdjustmentOperation } from '../adjustmentOperation';
-import type { Heading } from './heading';
-import { MAX_HEADING_LEVEL, MIN_HEADING_LEVEL } from './heading';
+import type { AdjustmentOperation } from '../contracts';
+
+/** `#` — the shallowest Markdown heading. */
+const MIN_HEADING_LEVEL = 1;
+
+/** `######` — the deepest heading Markdown defines. */
+const MAX_HEADING_LEVEL = 6;
+
+/**
+ * All this file needs a heading to be.
+ *
+ * Stating it structurally rather than importing `Heading` is what keeps this
+ * file a leaf: it depends on a shape, not on the file that happens to build
+ * one. `Heading` satisfies it without knowing this interface exists.
+ */
+export interface AdjustableHeading {
+  level: number;
+  readonly originalLevel: number;
+  readonly parent: AdjustableHeading | null;
+  readonly children: readonly AdjustableHeading[];
+}
 
 /**
  * Moves every heading by `levels`, keeping the tree's nesting intact.
@@ -14,7 +32,7 @@ import { MAX_HEADING_LEVEL, MIN_HEADING_LEVEL } from './heading';
  * Mutates `level` on the given headings; `originalLevel` is left untouched.
  */
 export function assignAdjustedLevels(
-  headings: readonly Heading[],
+  headings: readonly AdjustableHeading[],
   operation: AdjustmentOperation,
   levels: number
 ): void {
@@ -29,7 +47,7 @@ export function assignAdjustedLevels(
 }
 
 /** The level a heading rises to, never reaching its (already moved) parent. */
-function decreasedLevel(heading: Heading, levels: number): number {
+function decreasedLevel(heading: AdjustableHeading, levels: number): number {
   let level = Math.max(MIN_HEADING_LEVEL, heading.originalLevel - levels);
 
   if (heading.parent && level <= heading.parent.level) {
@@ -40,7 +58,7 @@ function decreasedLevel(heading: Heading, levels: number): number {
 }
 
 /** The level a heading sinks to, never reaching its (already moved) children. */
-function increasedLevel(heading: Heading, levels: number): number {
+function increasedLevel(heading: AdjustableHeading, levels: number): number {
   let level = Math.min(MAX_HEADING_LEVEL, heading.originalLevel + levels);
 
   for (const child of heading.children) {

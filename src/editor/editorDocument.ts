@@ -1,16 +1,26 @@
 // Types only: this module must stay loadable — and testable — without Obsidian.
 import type { Editor, EditorChange } from 'obsidian';
-import type { HeadingEdit } from '../core/adjustHeadings';
 
 /**
- * The translation between an Obsidian editor and the plain lines the core works
- * on. Everything that knows the shape of the editor API lives here.
+ * An Obsidian editor, seen as plain lines.
+ *
+ * Everything here is phrased in line numbers and columns and knows nothing
+ * about headings — which is what keeps it a leaf: the edits it applies are
+ * described by the shape below, not by a type it has to import.
  */
 
 /** A 0-based, inclusive span of lines. */
 export interface LineRange {
   fromLine: number;
   toLine: number;
+}
+
+/** A replacement of one span of one line. Core's `HeadingEdit` satisfies this. */
+export interface LineEdit {
+  line: number;
+  fromColumn: number;
+  toColumn: number;
+  text: string;
 }
 
 /** Snapshots the whole document as lines. */
@@ -43,10 +53,7 @@ export function selectedLineRange(editor: Editor): LineRange | null {
 }
 
 /** Writes the edits back as a single undoable transaction. */
-export function applyEditsToEditor(
-  editor: Editor,
-  edits: readonly HeadingEdit[]
-): void {
+export function applyLineEdits(editor: Editor, edits: readonly LineEdit[]): void {
   if (edits.length === 0) {
     return;
   }

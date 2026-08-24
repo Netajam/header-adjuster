@@ -3,7 +3,7 @@ import { strict as assert } from 'node:assert';
 
 import { parseHeadings } from '../../src/core/headingTree';
 import { assignAdjustedLevels } from '../../src/core/levelAdjustment';
-import type { AdjustmentOperation } from '../../src/adjustmentOperation';
+import type { AdjustmentOperation } from '../../src/contracts';
 
 function levelsAfter(
   lines: string[],

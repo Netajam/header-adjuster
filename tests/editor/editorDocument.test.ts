@@ -2,7 +2,7 @@ import { describe, test } from 'node:test';
 import { strict as assert } from 'node:assert';
 
 import {
-  applyEditsToEditor,
+  applyLineEdits,
   readEditorLines,
   selectedLineRange,
 } from '../../src/editor/editorDocument';
@@ -81,11 +81,11 @@ describe('selectedLineRange', () => {
   });
 });
 
-describe('applyEditsToEditor', () => {
+describe('applyLineEdits', () => {
   test('sends every edit as one undoable transaction', () => {
     const editor = fakeEditor(['# A']);
 
-    applyEditsToEditor(asEditor(editor), [
+    applyLineEdits(asEditor(editor), [
       { line: 0, fromColumn: 0, toColumn: 1, text: '##' },
     ]);
 
@@ -99,7 +99,7 @@ describe('applyEditsToEditor', () => {
   test('opens no transaction when nothing changed', () => {
     const editor = fakeEditor(['# A']);
 
-    applyEditsToEditor(asEditor(editor), []);
+    applyLineEdits(asEditor(editor), []);
 
     assert.deepEqual(editor.transactions, []);
   });
