@@ -1,24 +1,16 @@
 /**
- * What the level-input dialog accepts, decided without a dialog.
+ * What the level dialog accepts, decided without a dialog.
  *
- * Kept apart from the modal so the rules can be read — and tested — without
- * standing up Obsidian's UI.
+ * Takes the three values rather than the object that holds them, so this file
+ * shares no type with its parent and stays a leaf.
  */
 
-/** What the user typed, in the units the dialog speaks: 1-based line numbers. */
-export interface LevelInputSubmission {
-  /** Undefined when the field was left blank, meaning "use the default". */
-  levels: number | undefined;
-  /** Null when blank, meaning "from the top of the document". */
-  startLine: number | null;
-  /** Null when blank, meaning "to the end of the document". */
-  endLine: number | null;
-}
-
-/** The first thing wrong with a submission, phrased for the user, or null. */
-export function describeProblem(submission: LevelInputSubmission): string | null {
-  const { levels, startLine, endLine } = submission;
-
+/** The first thing wrong with what the user typed, phrased for them, or null. */
+export function describeProblem(
+  levels: number | undefined,
+  startLine: number | null,
+  endLine: number | null
+): string | null {
   if (levels !== undefined && !isPositiveInteger(levels)) {
     return 'Please enter a valid positive number for levels.';
   }

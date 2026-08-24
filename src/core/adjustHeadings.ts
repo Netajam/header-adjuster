@@ -1,6 +1,6 @@
 import type { AdjustmentOperation } from '../contracts';
 import type { HeadingEdit } from './headingEdits';
-import { applyHeadingEdits, collectHeadingEdits } from './headingEdits';
+import { collectHeadingEdits } from './headingEdits';
 import { parseHeadings } from './headingTree';
 import { assignAdjustedLevels } from './levelAdjustment';
 
@@ -13,8 +13,6 @@ import { assignAdjustedLevels } from './levelAdjustment';
  * and never need to name anything behind this file.
  */
 
-export type { HeadingEdit };
-export { applyHeadingEdits };
 
 /** What the user asked for: a direction, a distance, and the lines it applies to. */
 export interface AdjustmentRequest {

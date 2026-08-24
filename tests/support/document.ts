@@ -1,6 +1,6 @@
 import type { AdjustmentRequest } from '../../src/core/adjustHeadings';
 import { adjustHeadings } from '../../src/core/adjustHeadings';
-import { applyHeadingEdits } from '../../src/core/adjustHeadings';
+import { applyHeadingEdits } from '../../src/core/headingEdits';
 
 /**
  * Runs an adjustment over a Markdown snippet and gives back the resulting text.

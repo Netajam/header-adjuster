@@ -4,7 +4,6 @@ import type { LevelInputSubmission } from './levelInputForm';
 import { Modal, Notice, Setting } from 'obsidian';
 import { LevelInputForm } from './levelInputForm';
 
-export type { LevelInputSubmission };
 
 /** What the dialog needs to describe itself before the user types anything. */
 export interface LevelPrompt {

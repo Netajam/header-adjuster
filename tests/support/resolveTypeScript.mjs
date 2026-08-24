@@ -10,6 +10,13 @@
  */
 import { registerHooks } from 'node:module';
 
+/**
+ * `obsidian` is supplied by the app at runtime and is not installable, so
+ * tests point it at a stub. See `obsidianStub.ts` for what that does and does
+ * not buy you.
+ */
+const OBSIDIAN_STUB = new URL('./obsidianStub.ts', import.meta.url).href;
+
 function needsTypeScriptExtension(specifier) {
   if (!specifier.startsWith('./') && !specifier.startsWith('../')) {
     return false;
@@ -20,6 +27,9 @@ function needsTypeScriptExtension(specifier) {
 
 registerHooks({
   resolve(specifier, context, nextResolve) {
+    if (specifier === 'obsidian') {
+      return { url: OBSIDIAN_STUB, shortCircuit: true };
+    }
     if (needsTypeScriptExtension(specifier)) {
       try {
         return nextResolve(`${specifier}.ts`, context);

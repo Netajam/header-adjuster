@@ -5,7 +5,11 @@ import type {
 } from './contracts';
 import { Plugin } from 'obsidian';
 import { registerCommandSurfaces } from './commands/commandSurfaces';
-import { DEFAULT_SETTINGS, defaultLevelFor, installSettingsTab } from './settings/settings';
+import {
+  defaultLevelFor,
+  installSettingsTab,
+  readSettings,
+} from './settings/settings';
 
 /**
  * The entry point, and the root of the tree.
@@ -32,7 +36,7 @@ export default class HeaderAdjusterPlugin extends Plugin implements SettingsHost
   }
 
   async loadSettings(): Promise<void> {
-    this.settings = Object.assign({}, DEFAULT_SETTINGS, await this.loadData());
+    this.settings = await readSettings(this);
   }
 
   async saveSettings(): Promise<void> {

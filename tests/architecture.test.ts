@@ -131,6 +131,24 @@ describe('rule 2: every file gets its dependencies from its parent', () => {
   });
 });
 
+describe('rule 2, continued: no file re-exports what another file declares', () => {
+  /**
+   * A re-export makes this file look like the parent while the caller stays
+   * coupled to whatever is behind it — the arrow in the graph points at the
+   * wrong file. Banning them outright is what keeps "one parent" mean what it
+   * says, since a name can then only come from where it was declared.
+   */
+  for (const file of files) {
+    test(`${file.path} declares what it exports`, () => {
+      assert.deepEqual(
+        file.reExports,
+        [],
+        `${file.path} re-exports ${file.reExports.join(', ')}; import from where they are declared instead`
+      );
+    });
+  }
+});
+
 describe('the type-only carve-out stays honest', () => {
   const exempt = files.filter((file) => file.typeOnly);
 

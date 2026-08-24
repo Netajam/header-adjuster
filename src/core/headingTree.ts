@@ -1,6 +1,5 @@
 import { Heading, matchHeadingLevel } from './heading';
 
-export type { Heading };
 
 /**
  * Reads a slice of a document into headings linked into a tree.

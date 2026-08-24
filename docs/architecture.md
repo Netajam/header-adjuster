@@ -12,7 +12,10 @@ Breaking one fails the build.
 1. **Every folder has exactly one door.** Outsiders import one file from a
    folder and never reach past it.
 2. **Every file gets its dependencies from its parent.** The import graph is a
-   tree rooted at `main.ts`, so no file has two importers.
+   tree rooted at `main.ts`, so no file has two importers. **No file re-exports
+   what another file declares** — a re-export makes one file look like the
+   parent while the caller stays coupled to whatever is behind it, so the
+   arrow in the graph points at the wrong file.
 3. **No file declares more than 7 entities.**
 4. **No entity has more than 7 elements** — members for a class or interface,
    parameters for a function.
@@ -34,7 +37,6 @@ main.ts                              root
 │           └── ui/levelInputForm.ts
 │               └── ui/submissionValidation.ts
 └── settings/settings.ts             door
-    ├── settings/settingsDefaults.ts
     └── settings/settingsTab.ts
 
 contracts.ts                         shared vocabulary — outside the tree
@@ -52,6 +54,11 @@ declares `LineEdit`. `Heading` and `HeadingEdit` satisfy all three structurally
 without knowing they exist. This is why `core/heading.ts` has one importer
 rather than three, and it reads better than the import did: each file says what
 it wants from a heading rather than accepting the whole of one.
+
+Where even a shape would be duplication, the leaf takes values instead:
+`submissionValidation.ts` validates three arguments rather than the object
+holding them, so `levelInputForm.ts` can own `LevelInputSubmission` outright
+and nothing has to be passed back up.
 
 ## The one carve-out
 
@@ -71,9 +78,8 @@ rule starts applying and immediately fails on its seven importers.
   import anywhere in it, which is what makes the behaviour testable directly.
 - **`editor/`** is the Obsidian adapter, and the only place a decision becomes
   an effect: one undoable transaction and one `Notice`.
-- **`settings/`** splits along the line that matters — `settingsDefaults.ts` is
-  the policy and has no Obsidian in it; `settingsTab.ts` is the dialog and is
-  all Obsidian.
+- **`settings/`** is the policy — defaults, how a stored value is read back,
+  how a default is chosen — with the dialog that edits it behind the door.
 - **`commands/`** never imports `settings/`. `CommandContext` asks for
   `defaultLevel(operation)` rather than for the settings object, because the
   plugin is what owns the settings.
@@ -85,6 +91,12 @@ layout. Tests sit outside the tree and may import any file directly — that is
 what unit testing is.
 
 `tests/support/resolveTypeScript.mjs` teaches Node's ESM loader to resolve the
-extensionless relative imports that `esbuild` and `tsc` already understand.
+extensionless relative imports that `esbuild` and `tsc` already understand, and
+points the `obsidian` specifier at `obsidianStub.ts`. That stub is only enough
+for a module to load, so a file that imports Obsidian at the top can still be
+imported for the pure functions further down it. Nothing in it works: a test
+that starts leaning on stub behaviour is a sign the code under test belongs in
+a file that does not import Obsidian.
+
 `tests/support/sourceTree.ts` parses `src/` with TypeScript's own parser so the
 architecture test can tell an erased `import type` from a real dependency.

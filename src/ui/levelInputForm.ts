@@ -1,14 +1,6 @@
 import { Setting } from 'obsidian';
 import type { AdjustmentOperation } from '../contracts';
-import type { LevelInputSubmission } from './submissionValidation';
 import { describeProblem } from './submissionValidation';
-
-export type { LevelInputSubmission };
-
-/** Either a submission worth acting on, or the first thing wrong with it. */
-export type FormReading =
-  | { submission: LevelInputSubmission }
-  | { problem: string };
 
 /**
  * The three number fields of the level dialog, and what they add up to.
@@ -17,6 +9,22 @@ export type FormReading =
  * and what they mean. Enter in any field is routed to the same handler the
  * Submit button uses, which the modal passes in.
  */
+
+/** What the user typed, in the units the dialog speaks: 1-based line numbers. */
+export interface LevelInputSubmission {
+  /** Undefined when the field was left blank, meaning "use the default". */
+  levels: number | undefined;
+  /** Null when blank, meaning "from the top of the document". */
+  startLine: number | null;
+  /** Null when blank, meaning "to the end of the document". */
+  endLine: number | null;
+}
+
+/** Either a submission worth acting on, or the first thing wrong with it. */
+export type FormReading =
+  | { submission: LevelInputSubmission }
+  | { problem: string };
+
 export class LevelInputForm {
   private readonly levelsInput: HTMLInputElement;
   private readonly startLineInput: HTMLInputElement;
@@ -64,7 +72,11 @@ export class LevelInputForm {
       endLine: readOptionalNumber(this.endLineInput),
     };
 
-    const problem = describeProblem(submission);
+    const problem = describeProblem(
+      submission.levels,
+      submission.startLine,
+      submission.endLine
+    );
     return problem ? { problem } : { submission };
   }
 }

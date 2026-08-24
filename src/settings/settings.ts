@@ -1,17 +1,36 @@
 import type { Plugin } from 'obsidian';
-import type { SettingsHost } from '../contracts';
+import type {
+  AdjustmentOperation,
+  HeaderAdjusterSettings,
+  SettingsHost,
+} from '../contracts';
 import { HeaderAdjusterSettingTab } from './settingsTab';
 
 /**
- * The door into `settings/`.
+ * The user's preferences — the door into `settings/`.
  *
- * Behind it the folder splits along the line that matters: the policy
- * (`settingsDefaults.ts`) has no Obsidian in it and can be tested directly,
- * while the dialog that edits it (`settingsTab.ts`) is all Obsidian. Callers
- * see one contract and neither half.
+ * The shapes live in `contracts.ts`, because every layer names them. What
+ * lives here is the policy: what a fresh install uses, how a stored value is
+ * read back, how a default is chosen, and how the tab gets installed.
  */
 
-export { DEFAULT_SETTINGS, defaultLevelFor } from './settingsDefaults';
+const DEFAULT_SETTINGS: HeaderAdjusterSettings = {
+  increaseLevel: 1,
+  decreaseLevel: 1,
+};
+
+/** The stored settings, with anything missing filled in from the defaults. */
+export async function readSettings(plugin: Plugin): Promise<HeaderAdjusterSettings> {
+  return Object.assign({}, DEFAULT_SETTINGS, await plugin.loadData());
+}
+
+/** The shift to use when the user does not name one for this operation. */
+export function defaultLevelFor(
+  settings: HeaderAdjusterSettings,
+  operation: AdjustmentOperation
+): number {
+  return operation === 'increase' ? settings.increaseLevel : settings.decreaseLevel;
+}
 
 /** Adds the settings tab to Obsidian's settings dialog. */
 export function installSettingsTab(plugin: Plugin & SettingsHost): void {

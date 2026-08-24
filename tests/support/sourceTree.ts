@@ -34,6 +34,8 @@ export interface SourceFile {
   folder: string;
   imports: SourceImport[];
   entities: SourceEntity[];
+  /** Names this file exports without declaring — `export { x }` / `export … from`. */
+  reExports: string[];
   /** True when the file declares types and nothing that can run. */
   typeOnly: boolean;
 }
@@ -65,8 +67,23 @@ function readSource(absolutePath: string): SourceFile {
       describeImport(statement, absolutePath)
     ),
     entities,
+    reExports: ast.statements.flatMap(describeReExport),
     typeOnly: entities.every((entity) => entity.kind === 'interface' || entity.kind === 'type'),
   };
+}
+
+/**
+ * Names an `export` statement passes along rather than declares — both
+ * `export { x } from './y'` and the two-step `import { x }` / `export { x }`.
+ */
+function describeReExport(statement: ts.Statement): string[] {
+  if (!ts.isExportDeclaration(statement) || !statement.exportClause) {
+    return [];
+  }
+  if (!ts.isNamedExports(statement.exportClause)) {
+    return [];
+  }
+  return statement.exportClause.elements.map((element) => element.name.text);
 }
 
 /** Relative imports and re-exports, resolved to a path under `src/`. */
