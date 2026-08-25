@@ -23,3 +23,7 @@ data.json
 
 # Rejected-enhancement knowledge base (local, not committed)
 .out-of-scope/
+
+# Local tooling: MCP server config and nao's generated index
+.mcp.json
+.nao/

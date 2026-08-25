@@ -19,3 +19,10 @@ When a skill mentions a role (e.g. "apply the AFK-ready triage label"), write th
 corresponding value from this table.
 
 Edit the right-hand column to match whatever vocabulary you actually use.
+
+## After triage
+
+The five roles above describe *triage*, not the whole life of an issue: none of
+them means "done". Work that has shipped is recorded as `released (<version>)`,
+which sits outside the state machine — nothing transitions out of it, and a
+triage pass should skip anything carrying it.
