@@ -26,8 +26,6 @@ export class HeaderAdjusterSettingTab extends PluginSettingTab {
     const { containerEl } = this;
     containerEl.empty();
 
-    containerEl.createEl('h2', { text: 'Header Adjuster Settings' });
-
     this.addLevelSlider(
       'Default increase level',
       'The default number of levels to increase headers by.',
