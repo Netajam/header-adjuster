@@ -29,10 +29,16 @@ main.ts                              root
 │       ├── editor/headingAdjustmentService.ts   door — the only place effects happen
 │       │   ├── editor/editorDocument.ts
 │       │   └── core/adjustHeadings.ts           door — the whole decision, on strings
+│       │       ├── core/fencedLines.ts          which lines are code, not markup
 │       │       ├── core/headingTree.ts
 │       │       │   └── core/heading.ts
 │       │       ├── core/levelAdjustment.ts
-│       │       └── core/headingEdits.ts
+│       │       ├── core/headingEdits.ts
+│       │       └── core/conversion/conversion.ts  door — which conversion applies
+│       │           ├── core/conversion/bulletConversion.ts
+│       │           │   └── core/conversion/sectionBody.ts
+│       │           └── core/conversion/headingConversion.ts
+│       │               └── core/conversion/listItem.ts
 │       └── ui/levelInputModal.ts    door — the level dialog
 │           └── ui/levelInputForm.ts
 │               └── ui/submissionValidation.ts
@@ -50,8 +56,9 @@ instead of importing a type.
 
 `levelAdjustment.ts` declares `AdjustableHeading` — the four fields it actually
 touches. `headingEdits.ts` declares `EditableHeading`. `editorDocument.ts`
-declares `LineEdit`. `Heading` and `HeadingEdit` satisfy all three structurally
-without knowing they exist. This is why `core/heading.ts` has one importer
+declares `LineEdit`. `adjustHeadings.ts` declares `LeveledHeading` for the three
+fields an overflow is worked out from. `Heading` and `HeadingEdit` satisfy them
+all structurally without knowing they exist. This is why `core/heading.ts` has one importer
 rather than three, and it reads better than the import did: each file says what
 it wants from a heading rather than accepting the whole of one.
 
@@ -71,6 +78,25 @@ The exemption is earned per file, not granted by name: the architecture test
 checks that an exempt module contains nothing that can run and imports nothing
 itself. Add one function to `contracts.ts` and it stops qualifying — the tree
 rule starts applying and immediately fails on its seven importers.
+
+## Why `conversion/` is a folder
+
+The two conversions — a heading that outgrew `######` becoming a list item, and
+a list item becoming a heading again — are opposites of one another and never
+both apply. That choice is a thing in its own right, so it lives behind its own
+door rather than as two more branches in the door of `core/`.
+
+Grouping them was not only about naming. `core/` had grown to ten children,
+which is more than a reader takes in at once, and `adjustHeadings.ts` had grown
+a branch per setting. `conversion.ts` owns the choice between the two
+directions outright, so the door above it asks for a conversion once and is
+handed edits — the same way it asks for heading edits.
+
+It owns the ceiling too. How deep headings may go is configurable, but the
+setting is inert unless something converts, and a decrease converting a bullet
+back has to aim at the level an increase pushed it out from. Those are one
+decision read three ways, which is why `ceilingPolicy` returns all three rather
+than leaving each caller to work them out.
 
 ## Where the layers split
 

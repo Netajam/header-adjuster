@@ -14,10 +14,31 @@
 /** The two directions a heading level can be moved in. */
 export type AdjustmentOperation = 'increase' | 'decrease';
 
+/**
+ * Which of the two overflow conversions the user has switched on.
+ *
+ * Both ship off. Each rewrites more than a heading line — one re-indents a
+ * section body, the other converts every list item in range — so neither is
+ * something to start doing to a vault on upgrade without being asked.
+ */
+export interface ConversionSettings {
+  /** On increase, turn a heading pushed past H6 into a list item. */
+  headingsToBullets: boolean;
+  /** On decrease, turn list items back into headings. See docs/adr/0001. */
+  bulletsToHeadings: boolean;
+  /**
+   * The deepest level a heading may occupy before it converts to a bullet, and
+   * the level a bullet converts back to. Markdown's own limit of six when
+   * omitted, which is the setting doing nothing.
+   */
+  deepestHeadingLevel?: number;
+}
+
 /** The preferences a user can set for the plugin. */
-export interface HeaderAdjusterSettings {
+export interface HeaderAdjusterSettings extends ConversionSettings {
   increaseLevel: number;
   decreaseLevel: number;
+  deepestHeadingLevel: number;
 }
 
 /** Whatever owns the settings and can persist them. */

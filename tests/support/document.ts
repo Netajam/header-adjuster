@@ -12,7 +12,7 @@ import { applyHeadingEdits } from '../../src/core/headingEdits';
 export function adjust(
   markdown: string,
   request: AdjustmentRequest
-): { text: string; changedCount: number } {
+): { text: string; changedCount: number; truncatedSections: number } {
   const lines = markdown.split('\n');
   const outcome = adjustHeadings(lines, request);
 
@@ -23,6 +23,7 @@ export function adjust(
   return {
     text: applyHeadingEdits(lines, outcome.edits).join('\n'),
     changedCount: outcome.changedCount,
+    truncatedSections: outcome.truncatedSections,
   };
 }
 
