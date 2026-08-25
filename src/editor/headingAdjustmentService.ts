@@ -13,8 +13,6 @@ import { applyLineEdits, readEditorLines, selectedLineRange } from './editorDocu
  * happened. Every command surface funnels through here.
  */
 
-const LOG_PREFIX = '[Header Adjuster]';
-
 /**
  * @param conversion Which overflow conversions the user has switched on.
  * @param fromLine First 0-based line to adjust. Defaults to the document start.
@@ -65,21 +63,17 @@ export function adjustEditorSelection(
   adjustEditorHeadings(editor, operation, levels, conversion, range.fromLine, range.toLine);
 }
 
-/** A request that could not mean anything: a log for us, a notice for the user. */
+/**
+ * A request that could not mean anything.
+ *
+ * Only `no-headings` is something the user did: the dialog refuses a backwards
+ * range or a non-positive shift before it gets here, and the settings sliders
+ * cannot produce one either, so the other three can only come from a caller
+ * that is already wrong and there is nothing useful to say about them.
+ */
 function reportRejection(reason: RejectionReason): void {
-  switch (reason) {
-    case 'empty-range':
-      console.warn(`${LOG_PREFIX} Start line is after end line, skipping adjustment.`);
-      return;
-    case 'zero-levels':
-      console.log(`${LOG_PREFIX} Adjustment level is 0, skipping.`);
-      return;
-    case 'negative-levels':
-      console.warn(`${LOG_PREFIX} Adjustment level is negative, skipping.`);
-      return;
-    case 'no-headings':
-      new Notice('No headers found in the specified range/selection.');
-      return;
+  if (reason === 'no-headings') {
+    new Notice('No headers found in the specified range/selection.');
   }
 }
 

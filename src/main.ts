@@ -25,15 +25,10 @@ export default class HeaderAdjusterPlugin extends Plugin implements SettingsHost
   settings: HeaderAdjusterSettings;
 
   async onload(): Promise<void> {
-    console.log('Loading Header Adjuster Plugin');
     await this.loadSettings();
 
     registerCommandSurfaces(this, this);
     installSettingsTab(this);
-  }
-
-  onunload(): void {
-    console.log('Unloading Header Adjuster Plugin');
   }
 
   async loadSettings(): Promise<void> {
