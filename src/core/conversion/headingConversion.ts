@@ -13,6 +13,13 @@ import { matchListItem, nestedItems } from './listItem';
  * records no provenance, so a bullet this plugin wrote cannot be told from one
  * the user typed. `docs/adr/0001` records why that is accepted rather than
  * guessed at, and why the setting ships off.
+ *
+ * Only list items are eligible, though — never an unindented line of prose,
+ * even though one sits at the same depth as a top-level item. Nothing here ever
+ * writes prose, so there is none to restore: a section's body is indented by
+ * the forward conversion and comes back out that way. Converting it would also
+ * stop a decrease being repeatable, because each run de-indents another layer
+ * of body text to column zero for the next one to swallow.
  */
 
 /** A replacement of one span of one line. Core's `HeadingEdit` satisfies this. */
