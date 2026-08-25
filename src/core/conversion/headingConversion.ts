@@ -1,12 +1,13 @@
-import { INDENT_WIDTH, matchListItem } from './listItem';
+import { matchListItem, nestedItems } from './listItem';
 
 /**
  * Turning list items back into headings — the inverse of `bulletConversion.ts`.
  *
- * An item at depth `i`, decreased by `n`, lands at `ceiling - n + 1 + i`, which
+ * An item at level `i`, decreased by `n`, lands at `ceiling - n + 1 + i`, which
  * is exactly the level an increase of `n` would have pushed out to that depth.
- * An item too deep for the decrease to lift stays an item and gives up `n`
- * levels of indent instead, so the shape of a nested list survives.
+ * An item too deep for the decrease to lift stays an item and moves out to the
+ * column its grandparent occupied, so the shape of a nested list survives and
+ * the document's own indent style is kept.
  *
  * Which items are eligible is deliberately blunt: every one in range. Markdown
  * records no provenance, so a bullet this plugin wrote cannot be told from one
@@ -53,32 +54,34 @@ export function collectHeadingConversionEdits(
   fenced: readonly boolean[],
   range: ConversionRange
 ): HeadingConversion {
-  const { levels, fromLine, toLine } = range;
   const edits: HeadingConversionEdit[] = [];
   let changedCount = 0;
 
-  for (let index = fromLine; index <= toLine; index++) {
-    const item = fenced[index] ? null : matchListItem(lines[index]);
-    if (!item) {
-      continue;
-    }
-
+  for (const nested of nestedItems(lines, fenced, range.fromLine, range.toLine)) {
+    const { item, level } = nested;
     // Shallow enough to reach the ceiling becomes a heading; anything deeper
-    // stays an item and simply moves left.
-    const lifted = item.depth <= levels - 1;
+    // stays an item and moves out to the column its ancestor left behind.
+    const lifted = level < range.levels;
     const shift = lifted
       ? item.contentColumn
-      : item.indent.length - (item.depth - levels) * INDENT_WIDTH;
+      : item.indent.length - nested.enclosing[level - range.levels];
 
     edits.push({
-      line: index,
+      line: nested.line,
       fromColumn: 0,
       toColumn: lifted ? item.indent.length + item.marker.length : shift,
-      text: lifted ? '#'.repeat(liftedLevel(item.depth, range)) : '',
+      text: lifted ? '#'.repeat(liftedLevel(level, range)) : '',
     });
     changedCount++;
 
-    edits.push(...bodyEdits(lines, boundaries, fenced, { index, toLine, shift, column: item.contentColumn }));
+    edits.push(
+      ...bodyEdits(lines, boundaries, fenced, {
+        index: nested.line,
+        toLine: range.toLine,
+        shift,
+        indent: item.indent.length,
+      })
+    );
   }
 
   return { edits, changedCount };
@@ -90,9 +93,9 @@ export function collectHeadingConversionEdits(
  * The inverse of the overflow mapping: an item that an increase of `levels`
  * would have pushed out to this depth came from exactly this level.
  */
-function liftedLevel(depth: number, range: ConversionRange): number {
-  const level = range.ceiling - range.levels + 1 + depth;
-  return Math.max(1, Math.min(range.ceiling, level));
+function liftedLevel(level: number, range: ConversionRange): number {
+  const target = range.ceiling - range.levels + 1 + level;
+  return Math.max(1, Math.min(range.ceiling, target));
 }
 
 /** Where a converted item's body reaches, and how far each line of it moves. */
@@ -100,15 +103,18 @@ interface BodySpan {
   index: number;
   toLine: number;
   shift: number;
-  column: number;
+  /** The item's own indent width; its body has to be indented past it. */
+  indent: number;
 }
 
 /**
  * De-indents the lines belonging to a converted item.
  *
- * The body ends at the next item or section, or at the first line that no
- * longer reaches the item's content column — which is what makes the round trip
- * exact for a body that itself contains a nested list.
+ * A line belongs to the item when it is indented past the item's own marker —
+ * a test that holds whatever the document indents by, where comparing against
+ * the content column assumes one. The body ends at the next item or section, or
+ * at the first line that is no longer indented past it, which is what makes the
+ * round trip exact for a body that itself contains a nested list.
  */
 function bodyEdits(
   lines: readonly string[],
@@ -128,7 +134,7 @@ function bodyEdits(
     }
 
     const leading = text.length - text.trimStart().length;
-    if (leading < span.column) {
+    if (leading <= span.indent) {
       break;
     }
 

@@ -298,3 +298,58 @@ describe('a document survives the round trip', () => {
     assert.equal(back, before);
   });
 });
+
+describe('nesting is relative, not a column count', () => {
+  /**
+   * What makes an item a child is being indented past the item above it, not
+   * being indented by any particular amount. Obsidian indents with a tab by
+   * default, so reading depth as columns-divided-by-two lifted every child of a
+   * tab-indented list into a heading of its own.
+   */
+  const request = { operation: 'decrease' as const, levels: 1, conversion: TO_HEADINGS };
+
+  test('a tab-nested child stays an item and moves out one level', () => {
+    const { text } = adjust('- A\n\t- B\n\t\t- C', request);
+
+    assert.equal(text, '###### A\n- B\n\t- C');
+  });
+
+  test('a four-space-nested child moves out a whole level, not two columns', () => {
+    const { text } = adjust('- A\n    - B\n        - C', request);
+
+    assert.equal(text, '###### A\n- B\n    - C');
+  });
+
+  test('two-space nesting is unchanged by the same rule', () => {
+    const { text } = adjust('- A\n  - B\n    - C', request);
+
+    assert.equal(text, '###### A\n- B\n  - C');
+  });
+
+  test('the document keeps the indent style it was written in', () => {
+    assert.match(adjust('- A\n\t- B\n\t\t- C', request).text, /\n\t- C$/);
+    assert.match(adjust('- A\n    - B\n        - C', request).text, /\n {4}- C$/);
+  });
+
+  test('an inconsistently indented list still nests by what encloses what', () => {
+    const { text } = adjust('- A\n   - B\n      - C', request);
+
+    assert.equal(text, '###### A\n- B\n   - C');
+  });
+
+  test('body under a tab-indented item de-indents with it', () => {
+    const { text } = adjust('- A\n\tbody', request);
+
+    assert.equal(text, '###### A\nbody');
+  });
+
+  test('a decrease of two lifts two levels of a tab-indented list', () => {
+    const { text } = adjust('- A\n\t- B\n\t\t- C', {
+      operation: 'decrease',
+      levels: 2,
+      conversion: TO_HEADINGS,
+    });
+
+    assert.equal(text, '##### A\n###### B\n- C');
+  });
+});
