@@ -3,8 +3,14 @@ import type { AdjustmentOperation } from '../contracts';
 /** `#` — the shallowest Markdown heading. */
 const MIN_HEADING_LEVEL = 1;
 
-/** `######` — the deepest heading Markdown defines. */
-const MAX_HEADING_LEVEL = 6;
+/**
+ * `######` — the deepest heading Markdown defines.
+ *
+ * This is syntax, not policy: there is no seventh level to write. The level a
+ * user caps headings at is a separate, configurable thing, and lives with the
+ * conversions that are the only thing it governs.
+ */
+const MARKDOWN_MAX_LEVEL = 6;
 
 /**
  * All this file needs a heading to be.
@@ -60,12 +66,17 @@ function decreasedLevel(heading: AdjustableHeading, levels: number): number {
     level = heading.parent.level + 1;
   }
 
-  return Math.min(level, MAX_HEADING_LEVEL);
+  return Math.min(level, MARKDOWN_MAX_LEVEL);
 }
 
-/** How far past the ceiling a level sits. Zero when it still fits. */
-export function overflowDepth(level: number): number {
-  return Math.max(0, level - MAX_HEADING_LEVEL);
+/**
+ * How far past the ceiling a level sits. Zero when it still fits.
+ *
+ * The ceiling is passed in rather than assumed: a user who finds H5 unreadable
+ * caps headings higher up, and everything past that cap converts.
+ */
+export function overflowDepth(level: number, ceiling: number): number {
+  return Math.max(0, level - ceiling);
 }
 
 /** The level a heading sinks to, never reaching its (already moved) children. */
@@ -75,7 +86,7 @@ function increasedLevel(
   allowOverflow: boolean
 ): number {
   const target = heading.originalLevel + levels;
-  let level = allowOverflow ? target : Math.min(MAX_HEADING_LEVEL, target);
+  let level = allowOverflow ? target : Math.min(MARKDOWN_MAX_LEVEL, target);
 
   for (const child of heading.children) {
     if (level >= child.level) {

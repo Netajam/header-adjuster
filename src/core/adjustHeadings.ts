@@ -1,6 +1,6 @@
 import type { AdjustmentOperation, ConversionSettings } from '../contracts';
 import type { HeadingEdit } from './headingEdits';
-import { bulletsRequested, convertOverflow } from './conversion/conversion';
+import { ceilingPolicy, convertOverflow } from './conversion/conversion';
 import { collectHeadingEdits } from './headingEdits';
 import { computeFencedLines } from './fencedLines';
 import { headingBoundaries, parseHeadings } from './headingTree';
@@ -61,12 +61,19 @@ export function adjustHeadings(
   const headings = parseHeadings(lines, fromLine, toLine, fenced);
 
   const conversion = { ...request, fromLine, toLine, settings: request.conversion };
-  assignAdjustedLevels(headings, request.operation, request.levels, bulletsRequested(conversion));
+  const { overflowAt, allowOverflow } = ceilingPolicy(conversion);
+  assignAdjustedLevels(headings, request.operation, request.levels, allowOverflow);
 
   // A heading pushed past the ceiling is written as a bullet instead, so it must
   // not also be written back as a `#` run seven characters long.
-  const kept = headings.filter((heading) => overflowDepth(heading.level) === 0);
-  const converted = convertOverflow(lines, boundaries, fenced, overflowed(headings), conversion);
+  const kept = headings.filter((heading) => overflowDepth(heading.level, overflowAt) === 0);
+  const converted = convertOverflow(
+    lines,
+    boundaries,
+    fenced,
+    overflowed(headings, overflowAt),
+    conversion
+  );
   const edits = [...collectHeadingEdits(kept), ...converted.edits];
 
   if (edits.length === 0 && headings.length === 0) {
@@ -97,13 +104,13 @@ interface LeveledHeading {
 }
 
 /** The headings that outgrew the ceiling, paired with how deep they now land. */
-function overflowed(headings: readonly LeveledHeading[]) {
+function overflowed(headings: readonly LeveledHeading[], ceiling: number) {
   return headings
-    .filter((heading) => overflowDepth(heading.level) > 0)
+    .filter((heading) => overflowDepth(heading.level, ceiling) > 0)
     .map((heading) => ({
       lineNumber: heading.lineNumber,
       originalLevel: heading.originalLevel,
-      depth: overflowDepth(heading.level) - 1,
+      depth: overflowDepth(heading.level, ceiling) - 1,
     }));
 }
 

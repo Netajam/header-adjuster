@@ -26,12 +26,19 @@ export interface ConversionSettings {
   headingsToBullets: boolean;
   /** On decrease, turn list items back into headings. See docs/adr/0001. */
   bulletsToHeadings: boolean;
+  /**
+   * The deepest level a heading may occupy before it converts to a bullet, and
+   * the level a bullet converts back to. Markdown's own limit of six when
+   * omitted, which is the setting doing nothing.
+   */
+  deepestHeadingLevel?: number;
 }
 
 /** The preferences a user can set for the plugin. */
 export interface HeaderAdjusterSettings extends ConversionSettings {
   increaseLevel: number;
   decreaseLevel: number;
+  deepestHeadingLevel: number;
 }
 
 /** Whatever owns the settings and can persist them. */

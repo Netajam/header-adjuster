@@ -21,6 +21,8 @@ const DEFAULT_SETTINGS: HeaderAdjusterSettings = {
   // to start doing to an existing vault without being asked.
   headingsToBullets: false,
   bulletsToHeadings: false,
+  // Markdown's own limit, which is this setting having no effect.
+  deepestHeadingLevel: 6,
 };
 
 /** The stored settings, with anything missing filled in from the defaults. */

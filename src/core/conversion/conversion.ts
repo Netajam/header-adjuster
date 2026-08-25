@@ -46,15 +46,40 @@ export interface ConversionResult {
   truncatedSections: number;
 }
 
+/** What the configured ceiling means for one request. */
+export interface CeilingPolicy {
+  /** The level an increase has to pass before a heading becomes a bullet. */
+  overflowAt: number;
+  /** Whether levels may settle above that instead of clamping to it. */
+  allowOverflow: boolean;
+  /** The level a bullet comes back to on decrease. */
+  liftTo: number;
+}
+
 /**
- * Whether levels should be allowed to settle above the ceiling.
+ * Reads the ceiling three ways at once, because they are one decision.
  *
- * Asked before any heading moves, because the answer decides how levels are
- * computed rather than how they are written: only an increase that will convert
- * has any use for a level of seven.
+ * A configured ceiling is inert unless something actually converts. Capping
+ * headings at H4 while the conversion is off must not start clamping increases
+ * at H4 — that would let an increase make a heading *shallower*, which is not
+ * what a cap means. So `overflowAt` falls back to Markdown's own limit, which
+ * levels already respect, and the question falls away.
+ *
+ * `liftTo` does not: a decrease converting a bullet back has to aim at the
+ * level an increase would have pushed it out from, or the round trip does not
+ * close.
  */
-export function bulletsRequested(request: ConversionRequest): boolean {
-  return request.operation === 'increase' && request.settings?.headingsToBullets === true;
+export function ceilingPolicy(request: ConversionRequest): CeilingPolicy {
+  const markdownLimit = 6;
+  const configured = request.settings?.deepestHeadingLevel ?? markdownLimit;
+  const converting =
+    request.operation === 'increase' && request.settings?.headingsToBullets === true;
+
+  return {
+    overflowAt: converting ? configured : markdownLimit,
+    allowOverflow: converting,
+    liftTo: configured,
+  };
 }
 
 /**
@@ -77,14 +102,12 @@ export function convertOverflow(
 
   const backToHeadings =
     request.operation === 'decrease' && request.settings?.bulletsToHeadings === true
-      ? collectHeadingConversionEdits(
-          lines,
-          boundaries,
-          fenced,
-          request.levels,
-          request.fromLine,
-          request.toLine
-        )
+      ? collectHeadingConversionEdits(lines, boundaries, fenced, {
+          levels: request.levels,
+          fromLine: request.fromLine,
+          toLine: request.toLine,
+          ceiling: ceilingPolicy(request).liftTo,
+        })
       : { edits: [], changedCount: 0 };
 
   return {

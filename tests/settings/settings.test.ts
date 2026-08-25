@@ -15,6 +15,7 @@ describe('defaultLevelFor', () => {
       decreaseLevel: 3,
       headingsToBullets: false,
       bulletsToHeadings: false,
+      deepestHeadingLevel: 6,
     };
 
     assert.equal(defaultLevelFor(settings, 'increase'), 2);
@@ -29,6 +30,7 @@ describe('readSettings', () => {
       decreaseLevel: 1,
       headingsToBullets: false,
       bulletsToHeadings: false,
+      deepestHeadingLevel: 6,
     });
   });
 
@@ -45,6 +47,7 @@ describe('readSettings', () => {
       decreaseLevel: 1,
       headingsToBullets: false,
       bulletsToHeadings: false,
+      deepestHeadingLevel: 6,
     });
   });
 });

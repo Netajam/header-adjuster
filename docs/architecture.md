@@ -92,6 +92,12 @@ a branch per setting. `conversion.ts` owns the choice between the two
 directions outright, so the door above it asks for a conversion once and is
 handed edits — the same way it asks for heading edits.
 
+It owns the ceiling too. How deep headings may go is configurable, but the
+setting is inert unless something converts, and a decrease converting a bullet
+back has to aim at the level an increase pushed it out from. Those are one
+decision read three ways, which is why `ceilingPolicy` returns all three rather
+than leaving each caller to work them out.
+
 ## Where the layers split
 
 - **`core/`** is the whole adjustment as a function of text. No Obsidian

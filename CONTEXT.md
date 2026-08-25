@@ -18,8 +18,12 @@ people, and "promote" in particular suggests moving toward H1.
 Lowering a heading's level, so `### A` becomes `## A` — moving *shallower*.
 _Avoid_: Promote, demote.
 
+**Markdown limit**:
+The deepest heading Markdown defines, six — there is no `#######` to write.
+
 **Heading ceiling**:
-The deepest legal heading level, fixed at 6. Markdown defines no `#######`.
+The deepest level a heading may occupy before it converts, which the user sets.
+_Avoid_: Maximum heading level — on its own it caps nothing.
 
 **Overflow**:
 The amount by which a heading's computed target level exceeds the heading
@@ -48,6 +52,8 @@ out. Only **decrease** does this, and only when explicitly enabled.
 - An **overflow** of _n_ maps to a bullet indented _n − 1_ levels deep
 - **Increase** performs **bullet conversion**; **decrease** performs **heading
   conversion**. Neither is enabled by default
+- The **heading ceiling** defaults to the **Markdown limit**, and is inert
+  until a conversion is switched on
 
 ## Example dialogue
 

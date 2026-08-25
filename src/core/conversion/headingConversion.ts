@@ -14,15 +14,23 @@ import { INDENT_WIDTH, matchListItem } from './listItem';
  * guessed at, and why the setting ships off.
  */
 
-/** `######` — the deepest heading Markdown defines, as `levelAdjustment.ts` clamps to. */
-const MAX_HEADING_LEVEL = 6;
-
 /** A replacement of one span of one line. Core's `HeadingEdit` satisfies this. */
 export interface HeadingConversionEdit {
   line: number;
   fromColumn: number;
   toColumn: number;
   text: string;
+}
+
+/** Where a conversion applies, how far it moves, and what it converts back to. */
+export interface ConversionRange {
+  levels: number;
+  /** First 0-based line to convert. */
+  fromLine: number;
+  /** Last 0-based line to convert, inclusive. */
+  toLine: number;
+  /** The level a top-level item lifted all the way comes back to. */
+  ceiling: number;
 }
 
 /** The edits a conversion implies, and how many lines they rewrite. */
@@ -37,18 +45,15 @@ export interface HeadingConversion {
  * @param lines The whole document, unmodified.
  * @param boundaries Which lines start a new section.
  * @param fenced Which lines sit inside a code fence and are not markup.
- * @param levels How far the decrease moves.
- * @param fromLine First 0-based line to convert.
- * @param toLine Last 0-based line to convert, inclusive.
+ * @param range Where the conversion applies and what it converts back to.
  */
 export function collectHeadingConversionEdits(
   lines: readonly string[],
   boundaries: readonly boolean[],
   fenced: readonly boolean[],
-  levels: number,
-  fromLine: number,
-  toLine: number
+  range: ConversionRange
 ): HeadingConversion {
+  const { levels, fromLine, toLine } = range;
   const edits: HeadingConversionEdit[] = [];
   let changedCount = 0;
 
@@ -69,7 +74,7 @@ export function collectHeadingConversionEdits(
       line: index,
       fromColumn: 0,
       toColumn: lifted ? item.indent.length + item.marker.length : shift,
-      text: lifted ? '#'.repeat(liftedLevel(item.depth, levels)) : '',
+      text: lifted ? '#'.repeat(liftedLevel(item.depth, range)) : '',
     });
     changedCount++;
 
@@ -79,9 +84,15 @@ export function collectHeadingConversionEdits(
   return { edits, changedCount };
 }
 
-/** The heading level an item at this depth is lifted to. */
-function liftedLevel(depth: number, levels: number): number {
-  return Math.max(1, Math.min(MAX_HEADING_LEVEL, MAX_HEADING_LEVEL - levels + 1 + depth));
+/**
+ * The heading level an item at this depth is lifted to.
+ *
+ * The inverse of the overflow mapping: an item that an increase of `levels`
+ * would have pushed out to this depth came from exactly this level.
+ */
+function liftedLevel(depth: number, range: ConversionRange): number {
+  const level = range.ceiling - range.levels + 1 + depth;
+  return Math.max(1, Math.min(range.ceiling, level));
 }
 
 /** Where a converted item's body reaches, and how far each line of it moves. */
