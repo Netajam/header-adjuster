@@ -27,7 +27,10 @@ const DEFAULT_SETTINGS: HeaderAdjusterSettings = {
 
 /** The stored settings, with anything missing filled in from the defaults. */
 export async function readSettings(plugin: Plugin): Promise<HeaderAdjusterSettings> {
-  return Object.assign({}, DEFAULT_SETTINGS, await plugin.loadData());
+  // loadData() is typed `any`, and a vault may hold settings written by an
+  // older version of the plugin, so what comes back is a partial at best.
+  const stored = (await plugin.loadData()) as Partial<HeaderAdjusterSettings> | null;
+  return { ...DEFAULT_SETTINGS, ...stored };
 }
 
 /** The shift to use when the user does not name one for this operation. */
