@@ -51,6 +51,10 @@ export class Menu {
   showAtMouseEvent = notImplemented('Menu.showAtMouseEvent');
 }
 
+export class MarkdownView {
+  editor: unknown;
+}
+
 export class Notice {
   readonly message: string;
 
