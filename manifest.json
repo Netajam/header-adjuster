@@ -3,9 +3,9 @@
 	"name": "Header Adjuster",
 	"version": "1.0.4",
 	"minAppVersion": "0.15.0",
-	"description": "Easily adjust header levels in Markdown documents by increasing or decreasing their levels. Supports full document adjustments or specified line ranges, with default settings and commands for convenience",
+	"description": "Increase or decrease Markdown header levels across a whole note, a selection, or a given line range.",
 	"author": "Valentin Pelletier",
-	"authorUrl": "https://infiniterollo.com",
+	"authorUrl": "https://github.com/Netajam",
 	"fundingUrl": "https://github.com/sponsors/Netajam",
 	"isDesktopOnly": false
 }
