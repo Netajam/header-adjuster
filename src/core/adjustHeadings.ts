@@ -1,7 +1,6 @@
 import type { AdjustmentOperation, ConversionSettings } from '../contracts';
 import type { HeadingEdit } from './headingEdits';
-import { collectBulletEdits } from './bulletConversion';
-import { collectHeadingConversionEdits } from './headingConversion';
+import { bulletsRequested, convertOverflow } from './conversion/conversion';
 import { collectHeadingEdits } from './headingEdits';
 import { computeFencedLines } from './fencedLines';
 import { headingBoundaries, parseHeadings } from './headingTree';
@@ -61,31 +60,14 @@ export function adjustHeadings(
   const boundaries = headingBoundaries(lines, fenced);
   const headings = parseHeadings(lines, fromLine, toLine, fenced);
 
-  const conversion = request.conversion;
-  const toBullets = request.operation === 'increase' && conversion?.headingsToBullets === true;
-  assignAdjustedLevels(headings, request.operation, request.levels, toBullets);
+  const conversion = { ...request, fromLine, toLine, settings: request.conversion };
+  assignAdjustedLevels(headings, request.operation, request.levels, bulletsRequested(conversion));
 
-  // A heading pushed past the ceiling is written as a bullet instead, so it
-  // must not also be written back as a `#` run seven characters long.
-  const overflowing = headings.filter((heading) => overflowDepth(heading.level) > 0);
-  const bullets = collectBulletEdits(
-    lines,
-    overflowing.map((heading) => ({
-      lineNumber: heading.lineNumber,
-      originalLevel: heading.originalLevel,
-      depth: overflowDepth(heading.level) - 1,
-    })),
-    boundaries,
-    toLine
-  );
-
-  const headingsBack =
-    request.operation === 'decrease' && conversion?.bulletsToHeadings === true
-      ? collectHeadingConversionEdits(lines, boundaries, fenced, request.levels, fromLine, toLine)
-      : { edits: [], changedCount: 0 };
-
+  // A heading pushed past the ceiling is written as a bullet instead, so it must
+  // not also be written back as a `#` run seven characters long.
   const kept = headings.filter((heading) => overflowDepth(heading.level) === 0);
-  const edits = [...collectHeadingEdits(kept), ...bullets.edits, ...headingsBack.edits];
+  const converted = convertOverflow(lines, boundaries, fenced, overflowed(headings), conversion);
+  const edits = [...collectHeadingEdits(kept), ...converted.edits];
 
   if (edits.length === 0 && headings.length === 0) {
     return { status: 'rejected', reason: 'no-headings' };
@@ -96,12 +78,33 @@ export function adjustHeadings(
     // Bottom-up, so an editor applying them in order never invalidates a line
     // number it has not reached yet.
     edits: edits.sort((a, b) => b.line - a.line),
-    changedCount:
-      kept.filter((heading) => heading.hasChanged).length +
-      overflowing.length +
-      headingsBack.changedCount,
-    truncatedSections: bullets.truncatedSections,
+    changedCount: kept.filter((heading) => heading.hasChanged).length + converted.changedCount,
+    truncatedSections: converted.truncatedSections,
   };
+}
+
+/**
+ * All this file needs a heading to be.
+ *
+ * Stated rather than imported: naming `Heading` here would give the file that
+ * declares it a second parent, and the three fields below are the whole of what
+ * an overflow is worked out from.
+ */
+interface LeveledHeading {
+  readonly lineNumber: number;
+  readonly originalLevel: number;
+  readonly level: number;
+}
+
+/** The headings that outgrew the ceiling, paired with how deep they now land. */
+function overflowed(headings: readonly LeveledHeading[]) {
+  return headings
+    .filter((heading) => overflowDepth(heading.level) > 0)
+    .map((heading) => ({
+      lineNumber: heading.lineNumber,
+      originalLevel: heading.originalLevel,
+      depth: overflowDepth(heading.level) - 1,
+    }));
 }
 
 /** Requests that cannot mean anything, checked before the document is read. */

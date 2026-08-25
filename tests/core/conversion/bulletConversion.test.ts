@@ -1,7 +1,7 @@
 import { describe, test } from 'node:test';
 import { strict as assert } from 'node:assert';
 
-import { adjust, doc } from '../support/document';
+import { adjust, doc } from '../../support/document';
 
 /** Only the forward conversion, which is the one an increase can trigger. */
 const TO_BULLETS = { headingsToBullets: true, bulletsToHeadings: false };

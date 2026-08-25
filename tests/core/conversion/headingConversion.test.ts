@@ -1,8 +1,8 @@
 import { describe, test } from 'node:test';
 import { strict as assert } from 'node:assert';
 
-import { adjustHeadings } from '../../src/core/adjustHeadings';
-import { adjust, doc } from '../support/document';
+import { adjustHeadings } from '../../../src/core/adjustHeadings';
+import { adjust, doc } from '../../support/document';
 
 /** Only the reverse conversion, which is the one a decrease can trigger. */
 const TO_HEADINGS = { headingsToBullets: false, bulletsToHeadings: true };
