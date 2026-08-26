@@ -35,6 +35,11 @@ export function readEditorLines(editor: Editor): string[] {
   return lines;
 }
 
+/** The 0-based line the cursor sits on — where an adjustment of one line lands. */
+export function cursorLine(editor: Editor): number {
+  return editor.getCursor().line;
+}
+
 /**
  * The lines the user has selected, ordered start-to-end regardless of the
  * direction they dragged in. Null when there is no selection to read.

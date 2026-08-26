@@ -1,7 +1,11 @@
 import { describe, test } from 'node:test';
 import { strict as assert } from 'node:assert';
 
-import { adjustEditorHeadings } from '../../src/editor/headingAdjustmentService';
+import {
+  adjustEditorHeadings,
+  adjustEditorLine,
+  placeEditorLine,
+} from '../../src/editor/headingAdjustmentService';
 
 /**
  * That the conversions work is settled in `tests/core/`. What is settled here is
@@ -11,13 +15,14 @@ import { adjustEditorHeadings } from '../../src/editor/headingAdjustmentService'
  */
 
 /** The slice of Obsidian's Editor this layer uses, and a record of what it wrote. */
-function fakeEditor(lines: string[]) {
+function fakeEditor(lines: string[], cursor = 0) {
   const transactions: Array<{ changes: EditorChange[] }> = [];
 
   return {
     transactions,
     lineCount: () => lines.length,
     getLine: (index: number) => lines[index],
+    getCursor: () => ({ line: cursor, ch: 0 }),
     listSelections: () => [],
     transaction: (spec: { changes: EditorChange[] }) => transactions.push(spec),
   };
@@ -145,5 +150,70 @@ describe('a request that means nothing writes nothing', () => {
 
     assert.equal(editor.transactions.length, 1);
     assert.equal(editor.transactions[0].changes.length, 3);
+  });
+});
+
+/**
+ * That the cursor is what the current-line scope reads.
+ *
+ * `tests/core/lineLevel.test.ts` settles what happens to the line; every one of
+ * those tests names the line directly, so all of them would still pass if this
+ * layer asked the editor for the wrong one.
+ */
+describe('the cursor picks the line', () => {
+  test('adjusts the line the cursor is on and no other', () => {
+    const before = ['# A', '## B', '### C'];
+    const editor = fakeEditor([...before], 1);
+
+    adjustEditorLine(asEditor(editor), 'increase', 1);
+
+    assert.equal(written(editor, before), '# A\n### B\n### C');
+  });
+
+  test('writes a heading onto the plain line under the cursor', () => {
+    const before = ['# A', 'some prose'];
+    const editor = fakeEditor([...before], 1);
+
+    adjustEditorLine(asEditor(editor), 'increase', 1);
+
+    assert.equal(written(editor, before), '# A\n# some prose');
+  });
+
+  test('a line with nowhere to go is left as it is', () => {
+    const before = ['some prose'];
+    const editor = fakeEditor([...before], 0);
+
+    adjustEditorLine(asEditor(editor), 'decrease', 1);
+
+    assert.deepEqual(editor.transactions, []);
+  });
+});
+
+describe('a placement reads the cursor too', () => {
+  test('places the line the cursor is on against the heading above it', () => {
+    const before = ['## A', 'some prose', '### C'];
+    const editor = fakeEditor([...before], 1);
+
+    placeEditorLine(asEditor(editor), 'child');
+
+    assert.equal(written(editor, before), '## A\n### some prose\n### C');
+  });
+
+  test('removes the header from the line the cursor is on', () => {
+    const before = ['## A', '#### B'];
+    const editor = fakeEditor([...before], 1);
+
+    placeEditorLine(asEditor(editor), 'plain');
+
+    assert.equal(written(editor, before), '## A\nB');
+  });
+
+  test('a line already placed is left untouched', () => {
+    const before = ['## A', '### B'];
+    const editor = fakeEditor([...before], 1);
+
+    placeEditorLine(asEditor(editor), 'child');
+
+    assert.deepEqual(editor.transactions, []);
   });
 });

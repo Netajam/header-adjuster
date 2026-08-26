@@ -1,7 +1,7 @@
 {
 	"name": "obsidian-header-adjuster",
 	"version": "1.1.1",
-	"description": "Obsidian plugin to increase or decrease Markdown header levels across a whole note, a selection, or a given line range.",
+	"description": "Obsidian plugin to increase or decrease Markdown header levels across a whole note, a selection, a given line range, or just the current line.",
 	"main": "main.js",
 	"scripts": {
 		"dev": "node esbuild.config.mjs",
