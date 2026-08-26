@@ -68,6 +68,28 @@ Clicking the ribbon icon opens a menu with options to:
 - Remove the current line's header, or place it as a sibling or child of the
   header above.
 
+### On Mobile
+
+Obsidian's mobile toolbar shows commands as icons with no names, so every
+command this plugin registers carries its own symbol and no two are alike:
+
+| Symbol family      | Scope                            |
+| ------------------ | -------------------------------- |
+| Solid arrow        | the dialog — you say how far     |
+| Page with +/−      | the whole note                   |
+| Box with +/−       | the selection                    |
+| Bare chevron       | the current line                 |
+| A struck through   | remove the header                |
+| Equals sign        | sibling of the header above      |
+| Arrow turning in   | child of the header above        |
+
+Up increases and down decreases throughout, so there are two things to learn
+rather than eleven.
+
+To add one: Settings → Toolbar, then pick the commands you want. The ribbon
+menu shows the same symbols beside their names, which is the quickest way to
+learn which is which.
+
 ### Modal Input
 
 When using the "Increase header level..." or "Decrease header level..." commands, a dialog will prompt you to:

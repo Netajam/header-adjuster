@@ -25,6 +25,7 @@ Breaking one fails the build.
 ```
 main.ts                              root
 ├── commands/commandSurfaces.ts      door — ribbon icon + palette entries
+│   ├── commands/icons.ts            one symbol per action
 │   └── commands/adjustmentCommands.ts
 │       ├── commands/activeEditor.ts             which editor a command acts on
 │       ├── editor/headingAdjustmentService.ts   door — the only place effects happen
@@ -170,6 +171,13 @@ than leaving each caller to work them out.
   an effect: one undoable transaction and one `Notice`.
 - **`settings/`** is the policy — defaults, how a stored value is read back,
   how a default is chosen — with the dialog that edits it behind the door.
+- **`commands/`** owns how an action is offered, which on mobile means its
+  symbol as much as its name: the toolbar there shows the icon and nothing
+  else, so two actions wearing one glyph are two actions a user cannot tell
+  apart. `icons.ts` holds the symbol next to nothing but itself, and both the
+  palette entry and the ribbon item read it, so the two cannot drift. The
+  ribbon menu is also where every symbol appears at once, which is what makes
+  a missing one visible.
 - **`commands/`** never imports `settings/`. `CommandContext` asks for
   `defaultLevel(operation)` rather than for the settings object, because the
   plugin is what owns the settings.
