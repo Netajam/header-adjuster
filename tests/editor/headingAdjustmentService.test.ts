@@ -194,7 +194,7 @@ describe('a placement reads the cursor too', () => {
     const before = ['## A', 'some prose', '### C'];
     const editor = fakeEditor([...before], 1);
 
-    placeEditorLine(asEditor(editor), 'child');
+    placeEditorLine(asEditor(editor), 'child', 'sibling');
 
     assert.equal(written(editor, before), '## A\n### some prose\n### C');
   });
@@ -203,7 +203,7 @@ describe('a placement reads the cursor too', () => {
     const before = ['## A', '#### B'];
     const editor = fakeEditor([...before], 1);
 
-    placeEditorLine(asEditor(editor), 'plain');
+    placeEditorLine(asEditor(editor), 'plain', 'sibling');
 
     assert.equal(written(editor, before), '## A\nB');
   });
@@ -212,7 +212,7 @@ describe('a placement reads the cursor too', () => {
     const before = ['## A', '### B'];
     const editor = fakeEditor([...before], 1);
 
-    placeEditorLine(asEditor(editor), 'child');
+    placeEditorLine(asEditor(editor), 'child', 'sibling');
 
     assert.deepEqual(editor.transactions, []);
   });

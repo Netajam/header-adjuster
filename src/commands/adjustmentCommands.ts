@@ -2,6 +2,7 @@ import type { App, Editor } from 'obsidian';
 import type {
   AdjustmentOperation,
   ConversionSettings,
+  HeadingPlacement,
   LinePlacement,
 } from '../contracts';
 import { Notice } from 'obsidian';
@@ -32,6 +33,8 @@ export interface CommandContext {
   defaultLevel(operation: AdjustmentOperation): number;
   /** Which overflow conversions are switched on, for the same reason. */
   conversion(): ConversionSettings;
+  /** Where the toggle is pointed, for the same reason again. */
+  toggleTarget(): HeadingPlacement;
 }
 
 /** Asks for a shift and a range, then adjusts what the user named. */
@@ -114,7 +117,9 @@ export function placeCurrentLine(
 ): void {
   const editor = requireActiveEditor(context);
   if (editor) {
-    placeEditorLine(editor, placement);
+    // Asked for now rather than when the command was registered, so a setting
+    // changed mid-session takes effect without a reload.
+    placeEditorLine(editor, placement, context.toggleTarget());
   }
 }
 

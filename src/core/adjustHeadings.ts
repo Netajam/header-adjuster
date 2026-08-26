@@ -1,6 +1,7 @@
 import type {
   AdjustmentOperation,
   ConversionSettings,
+  HeadingPlacement,
   LinePlacement,
   RejectionReason,
 } from '../contracts';
@@ -119,11 +120,12 @@ export function adjustHeadings(
 export function placeLineHeading(
   lines: readonly string[],
   lineNumber: number,
-  placement: LinePlacement
+  placement: LinePlacement,
+  target: HeadingPlacement = 'sibling'
 ): AdjustmentOutcome {
   const fenced = computeFencedLines(lines);
   const above = parseHeadings(lines, 0, lineNumber - 1, fenced);
-  const edits = placeLineLevel(lines, fenced, lineNumber, placement, above);
+  const edits = placeLineLevel(lines, fenced, lineNumber, placement, above, target);
 
   return { status: 'adjusted', edits, changedCount: edits.length, truncatedSections: 0 };
 }

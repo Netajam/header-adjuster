@@ -1,6 +1,7 @@
 import { describe, test } from 'node:test';
 import { strict as assert } from 'node:assert';
 
+import type { LinePlacement } from '../../src/contracts';
 import { adjustHeadings, placeLineHeading } from '../../src/core/adjustHeadings';
 import { applyHeadingEdits } from '../../src/core/headingEdits';
 import { adjust, doc } from '../support/document';
@@ -445,7 +446,7 @@ describe('placing the current line against the section it sits in', () => {
   function place(
     markdown: string,
     lineNumber: number,
-    placement: 'plain' | 'sibling' | 'child'
+    placement: LinePlacement
   ): { text: string; changedCount: number } {
     const lines = markdown.split('\n');
     const outcome = placeLineHeading(lines, lineNumber, placement);
@@ -634,6 +635,35 @@ describe('placing the current line against the section it sits in', () => {
     const { changedCount } = place('## Setup\n- item', 1, 'plain');
 
     assert.equal(changedCount, 0);
+  });
+
+  test('a toggle reads the outline for what to put on, and the line for whether to', () => {
+    const before = doc`
+      # Guide
+      ## Setup
+      some prose
+    `;
+
+    const on = place(before, 2, 'toggle');
+    assert.equal(
+      on.text,
+      doc`
+        # Guide
+        ## Setup
+        ## some prose
+      `
+    );
+    assert.equal(on.changedCount, 1);
+
+    const off = place(on.text, 2, 'toggle');
+    assert.equal(off.text, before);
+    assert.equal(off.changedCount, 1);
+  });
+
+  test('a toggle under a fenced heading answers to the real one above', () => {
+    const { text } = place('## Setup\n```\n### fake\n```\nsome prose', 4, 'toggle');
+
+    assert.equal(text, '## Setup\n```\n### fake\n```\n## some prose');
   });
 
   test('a line already where the placement wants it is nothing to do', () => {

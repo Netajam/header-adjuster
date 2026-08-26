@@ -14,6 +14,9 @@ import { HeadingAdjusterSettingTab } from '../../src/settings/settingsTab';
  * of them touches the DOM.
  */
 
+/** The three kinds of control this plugin binds, and nothing else. */
+const CONTROL_TYPES = ['slider', 'toggle', 'dropdown'];
+
 async function defaults(): Promise<HeadingAdjusterSettings> {
   return readSettings({ loadData: async () => null } as never);
 }
@@ -132,5 +135,55 @@ describe('setControlValue', () => {
 
     assert.deepEqual(settings, await defaults());
     assert.deepEqual(saves, []);
+  });
+});
+
+describe('the toggle target dropdown', () => {
+  test('offers exactly the three places a toggle can be pointed', async () => {
+    const { tab } = tabFor(await defaults());
+    const control = controls(tab).find((each) => each.key === 'toggleTarget');
+
+    assert.ok(control && control.type === 'dropdown');
+    assert.deepEqual(Object.keys(control.options), ['root', 'sibling', 'child']);
+  });
+
+  test('a chosen target is stored and persisted', async () => {
+    const settings = await defaults();
+    const { tab, saves } = tabFor(settings);
+
+    await tab.setControlValue('toggleTarget', 'child');
+
+    assert.equal(settings.toggleTarget, 'child');
+    assert.equal(saves.length, 1);
+  });
+
+  test('a string that is not one of the three is refused rather than stored', async () => {
+    const settings = await defaults();
+    const { tab, saves } = tabFor(settings);
+
+    await tab.setControlValue('toggleTarget', 'grandchild');
+
+    assert.equal(settings.toggleTarget, 'sibling');
+    assert.deepEqual(saves, []);
+  });
+
+  test('a value of the wrong type entirely is refused too', async () => {
+    const settings = await defaults();
+    const { tab } = tabFor(settings);
+
+    await tab.setControlValue('toggleTarget', 3);
+
+    assert.equal(settings.toggleTarget, 'sibling');
+  });
+
+  test('every control the tab binds is one of the kinds it knows how to draw', async () => {
+    const { tab } = tabFor(await defaults());
+
+    for (const control of controls(tab)) {
+      assert.ok(
+        CONTROL_TYPES.includes(control.type),
+        `${control.key} is a ${control.type}, which display() would draw as a toggle`
+      );
+    }
   });
 });

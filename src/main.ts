@@ -2,6 +2,7 @@ import type {
   AdjustmentOperation,
   ConversionSettings,
   HeadingAdjusterSettings,
+  HeadingPlacement,
   SettingsHost,
 } from './contracts';
 import { Plugin } from 'obsidian';
@@ -47,5 +48,10 @@ export default class HeadingAdjusterPlugin extends Plugin implements SettingsHos
   /** Which conversions are switched on. Also satisfies `CommandContext`. */
   conversion(): ConversionSettings {
     return this.settings;
+  }
+
+  /** Where the toggle is pointed. The third thing a command may ask. */
+  toggleTarget(): HeadingPlacement {
+    return this.settings.toggleTarget;
   }
 }

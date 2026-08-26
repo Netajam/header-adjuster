@@ -1,6 +1,7 @@
 import { describe, test } from 'node:test';
 import { strict as assert } from 'node:assert';
 
+import type { HeadingAdjusterSettings } from '../../src/contracts';
 import { defaultLevelFor, readSettings } from '../../src/settings/settings';
 
 /** A plugin as far as `readSettings` is concerned: something with stored data. */
@@ -10,12 +11,13 @@ function pluginStoring(data: unknown) {
 
 describe('defaultLevelFor', () => {
   test('picks the shift configured for the direction being asked about', () => {
-    const settings = {
+    const settings: HeadingAdjusterSettings = {
       increaseLevel: 2,
       decreaseLevel: 3,
       headingsToBullets: false,
       bulletsToHeadings: false,
       deepestHeadingLevel: 6,
+      toggleTarget: 'sibling',
     };
 
     assert.equal(defaultLevelFor(settings, 'increase'), 2);
@@ -31,6 +33,7 @@ describe('readSettings', () => {
       headingsToBullets: false,
       bulletsToHeadings: false,
       deepestHeadingLevel: 6,
+      toggleTarget: 'sibling',
     });
   });
 
@@ -48,6 +51,7 @@ describe('readSettings', () => {
       headingsToBullets: false,
       bulletsToHeadings: false,
       deepestHeadingLevel: 6,
+      toggleTarget: 'sibling',
     });
   });
 });

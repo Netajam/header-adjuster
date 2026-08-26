@@ -23,6 +23,9 @@ const DEFAULT_SETTINGS: HeadingAdjusterSettings = {
   bulletsToHeadings: false,
   // Markdown's own limit, which is this setting having no effect.
   deepestHeadingLevel: 6,
+  // What the toggle did before it could be pointed anywhere else, so an
+  // upgrade finds the command behaving exactly as it left it.
+  toggleTarget: 'sibling',
 };
 
 /** The stored settings, with anything missing filled in from the defaults. */

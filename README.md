@@ -51,6 +51,9 @@ say.
 - **Increase heading level of current line by N** / **Decrease heading level of
   current line by N**: Shifts the line the cursor is on, and nothing else. See
   [The current line](#the-current-line) below.
+- **Toggle heading on current line**: Puts a heading on the current line at the
+  level of the heading above, or takes it off again if it is already there. One
+  binding for both halves — see [Toggling](#toggling) below.
 - **Remove heading from current line**: Turns the current line back into plain
   text, whatever level it was at.
 - **Make current line a sibling of the heading above**: Sets the current line to
@@ -85,7 +88,10 @@ command this plugin registers carries its own symbol and no two are alike:
 | Arrow turning in | child of the heading above   |
 
 Up increases and down decreases throughout, so there are two things to learn
-rather than eleven.
+rather than twelve.
+
+If you only have one slot, spend it on the hash: "Toggle heading on current
+line" both makes a section and unmakes it.
 
 To add one: Settings → Toolbar, then pick the commands you want. The ribbon
 menu shows the same symbols beside their names, which is the quickest way to
@@ -147,6 +153,34 @@ If there is no heading above the line, both "sibling" and "child" produce an `#`
 — the note itself is what encloses the line. A heading inside a code fence does
 not count as the heading above, and a line inside one is left alone.
 
+#### Toggling
+
+"Toggle heading on current line" is the sibling placement and the removal in one
+command, which is what you want if you have a single hotkey or a single free
+slot on the mobile toolbar to spend:
+
+```markdown
+# Guide
+## Setup
+some prose        ← cursor here
+```
+
+| Toggle set to                     | Once             | Twice        |
+| --------------------------------- | ---------------- | ------------ |
+| Same level as the heading above    | `## some prose`  | `some prose` |
+| One level below the heading above  | `### some prose` | `some prose` |
+| Top level                          | `# some prose`   | `some prose` |
+
+Which of the three it uses is yours to set, under **Toggle puts the heading at**
+in the settings. It ships as "same level as the heading above".
+
+A heading already at some *other* level is moved to the one you chose rather
+than removed, so the second press is what takes it off. That keeps two presses
+enough to reach plain text from anywhere, and keeps a press from ever destroying
+a level you would have to retype. It also means the toggle only takes off the
+level it puts on: set to "one below", it will move a sibling heading rather than
+remove it.
+
 #### Lines that are already bullets
 
 A line cannot be a bullet and a heading at once, so writing a heading onto a list
@@ -170,6 +204,9 @@ Access the plugin settings from the Obsidian Settings under the "Heading Adjuste
 
 - **Default increase level**: The default number of levels to increase headings by.
 - **Default decrease level**: The default number of levels to decrease headings by.
+- **Toggle puts the heading at**: Which level "Toggle heading on current line"
+  writes, and so which level it takes back off — the top level (`#`), the same
+  level as the heading above, or one below it. Defaults to the same level.
 - **Deepest heading level**: The level headings stop at. Anything an increase
   would push past it becomes a bulleted list item instead, and a bullet
   converted back returns to this level. Only has an effect with a conversion
