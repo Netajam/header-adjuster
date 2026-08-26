@@ -1,9 +1,19 @@
 import type { Editor } from 'obsidian';
-import type { AdjustmentOperation, ConversionSettings } from '../contracts';
-import type { RejectionReason } from '../core/adjustHeadings';
+import type {
+  AdjustmentOperation,
+  ConversionSettings,
+  LinePlacement,
+  RejectionReason,
+} from '../contracts';
+import type { AdjustmentOutcome } from '../core/adjustHeadings';
 import { Notice } from 'obsidian';
-import { adjustHeadings } from '../core/adjustHeadings';
-import { applyLineEdits, readEditorLines, selectedLineRange } from './editorDocument';
+import { adjustHeadings, placeLineHeading } from '../core/adjustHeadings';
+import {
+  applyLineEdits,
+  cursorLine,
+  readEditorLines,
+  selectedLineRange,
+} from './editorDocument';
 
 /**
  * Running a heading adjustment against a live editor — the door into `editor/`.
@@ -26,14 +36,66 @@ export function adjustEditorHeadings(
   fromLine?: number,
   toLine?: number
 ): void {
-  const outcome = adjustHeadings(readEditorLines(editor), {
-    operation,
-    levels,
-    conversion,
-    fromLine,
-    toLine,
-  });
+  applyOutcome(
+    editor,
+    adjustHeadings(readEditorLines(editor), {
+      operation,
+      levels,
+      conversion,
+      fromLine,
+      toLine,
+    })
+  );
+}
 
+/**
+ * Adjusts the level of the line the cursor sits on, and nothing else.
+ *
+ * The finest of the three scopes, and the only one that reads a plain line as a
+ * heading of level zero: increasing writes a heading onto it, decreasing an
+ * `#` takes the heading away. Nesting is left alone on purpose — a user who
+ * wants a heading's children to follow selects them, which is what the
+ * selection scope is for.
+ *
+ * No conversion is passed, because `levelZero` does not read one: a bullet
+ * conversion re-indents a section body, and one line is not a section.
+ */
+export function adjustEditorLine(
+  editor: Editor,
+  operation: AdjustmentOperation,
+  levels: number
+): void {
+  const line = cursorLine(editor);
+
+  applyOutcome(
+    editor,
+    adjustHeadings(readEditorLines(editor), {
+      operation,
+      levels,
+      fromLine: line,
+      toLine: line,
+      levelZero: true,
+    })
+  );
+}
+
+/**
+ * Writes the line the cursor sits on as a heading placed against the section it
+ * is in, or as plain text.
+ *
+ * No direction and no distance: a placement says where the line belongs, and
+ * the level that follows from that is the same whichever level it is written at
+ * now.
+ */
+export function placeEditorLine(editor: Editor, placement: LinePlacement): void {
+  applyOutcome(
+    editor,
+    placeLineHeading(readEditorLines(editor), cursorLine(editor), placement)
+  );
+}
+
+/** Writes what was decided, then says what happened — the two effects, in order. */
+function applyOutcome(editor: Editor, outcome: AdjustmentOutcome): void {
   if (outcome.status === 'rejected') {
     reportRejection(outcome.reason);
     return;

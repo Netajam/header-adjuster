@@ -1,11 +1,13 @@
 import type { Editor, Plugin } from 'obsidian';
-import type { AdjustmentOperation } from '../contracts';
+import type { AdjustmentOperation, LinePlacement } from '../contracts';
 import type { CommandContext } from './adjustmentCommands';
 import { Menu } from 'obsidian';
 import {
   adjustActiveDocument,
   adjustActiveSelection,
+  adjustCurrentLine,
   adjustSelection,
+  placeCurrentLine,
   promptForAdjustment,
 } from './adjustmentCommands';
 
@@ -13,12 +15,35 @@ import {
  * Every way a user can reach the plugin, registered in one call — the door
  * into `commands/`.
  *
- * The palette offers the same three things in each direction, so those are
- * generated from the pair. The ribbon menu is written out, because its order
- * and its separators are the thing being designed.
+ * The palette offers the same four scopes in each direction, so those are
+ * generated from the pair, and the three placements from their own table: a
+ * placement has no direction, so there is nothing to pair it with. The ribbon
+ * menu is written out, because its order and its separators are the thing being
+ * designed.
  */
 
 const OPERATIONS: AdjustmentOperation[] = ['increase', 'decrease'];
+
+/**
+ * The placements, with the words they are offered under: the palette entry
+ * names the line because it stands alone in a search, the menu entry does not
+ * because the group it sits in already said so.
+ */
+const PLACEMENTS: Array<[LinePlacement, string, string, string]> = [
+  ['plain', 'Remove header from current line', 'Remove header', 'x-square'],
+  [
+    'sibling',
+    'Make current line a sibling of the header above',
+    'Sibling of the header above',
+    'equal',
+  ],
+  [
+    'child',
+    'Make current line a child of the header above',
+    'Child of the header above',
+    'corner-down-right',
+  ],
+];
 
 export function registerCommandSurfaces(
   plugin: Plugin,
@@ -30,6 +55,14 @@ export function registerCommandSurfaces(
 
   for (const operation of OPERATIONS) {
     registerCommandsFor(plugin, context, operation);
+  }
+
+  for (const [placement, name] of PLACEMENTS) {
+    plugin.addCommand({
+      id: `header-current-line-${placement}`,
+      name,
+      callback: () => placeCurrentLine(context, placement),
+    });
   }
 }
 
@@ -55,6 +88,12 @@ function registerCommandsFor(
     id: `${operation}-header-level-default`,
     name: `${verb(operation)} header level by ${levels} (entire document)`,
     callback: () => adjustActiveDocument(context, operation),
+  });
+
+  plugin.addCommand({
+    id: `${operation}-header-level-current-line`,
+    name: `${verb(operation)} header level of current line by ${levels}`,
+    callback: () => adjustCurrentLine(context, operation),
   });
 
   plugin.addCommand({
@@ -99,6 +138,21 @@ function buildRibbonMenu(context: CommandContext): Menu {
   addMenuItem(menu, `Decrease level by (-${decreaseBy}) (Selection)`, 'minus-square', () =>
     adjustActiveSelection(context, 'decrease')
   );
+  menu.addSeparator();
+
+  addMenuItem(menu, `Increase level by (+${increaseBy}) (Current line)`, 'plus-square', () =>
+    adjustCurrentLine(context, 'increase')
+  );
+  addMenuItem(menu, `Decrease level by (-${decreaseBy}) (Current line)`, 'minus-square', () =>
+    adjustCurrentLine(context, 'decrease')
+  );
+  menu.addSeparator();
+
+  for (const [placement, , label, icon] of PLACEMENTS) {
+    addMenuItem(menu, `${label} (Current line)`, icon, () =>
+      placeCurrentLine(context, placement)
+    );
+  }
 
   return menu;
 }

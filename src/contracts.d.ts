@@ -15,6 +15,29 @@
 export type AdjustmentOperation = 'increase' | 'decrease';
 
 /**
+ * Where the current line's heading sits relative to the section it is in.
+ *
+ * These name a level outright instead of a distance to move, which is what
+ * separates them from an operation: nothing about them reads how deep the line
+ * is written now. `plain` is level zero — no heading at all — and is how one is
+ * taken away. The other two are read against the enclosing heading, the nearest
+ * heading above the line.
+ */
+export type LinePlacement = 'plain' | 'sibling' | 'child';
+
+/**
+ * Why an adjustment produced nothing.
+ *
+ * Core decides these and the editor is what says them out loud, which is why
+ * the word is shared rather than owned by either.
+ */
+export type RejectionReason =
+  | 'empty-range'
+  | 'zero-levels'
+  | 'negative-levels'
+  | 'no-headings';
+
+/**
  * Which of the two overflow conversions the user has switched on.
  *
  * Both ship off. Each rewrites more than a heading line — one re-indents a

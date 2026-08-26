@@ -26,6 +26,7 @@ Breaking one fails the build.
 main.ts                              root
 ├── commands/commandSurfaces.ts      door — ribbon icon + palette entries
 │   └── commands/adjustmentCommands.ts
+│       ├── commands/activeEditor.ts             which editor a command acts on
 │       ├── editor/headingAdjustmentService.ts   door — the only place effects happen
 │       │   ├── editor/editorDocument.ts
 │       │   └── core/adjustHeadings.ts           door — the whole decision, on strings
@@ -33,6 +34,9 @@ main.ts                              root
 │       │       ├── core/headingTree.ts
 │       │       │   └── core/heading.ts
 │       │       ├── core/levelAdjustment.ts
+│       │       ├── core/line/line.ts             door — the current line's level
+│       │       │   ├── core/line/placement.ts
+│       │       │   └── core/line/marker.ts
 │       │       ├── core/headingEdits.ts
 │       │       └── core/conversion/conversion.ts  door — which conversion applies
 │       │           ├── core/conversion/bulletConversion.ts
@@ -56,7 +60,10 @@ instead of importing a type.
 
 `levelAdjustment.ts` declares `AdjustableHeading` — the four fields it actually
 touches. `headingEdits.ts` declares `EditableHeading`. `editorDocument.ts`
-declares `LineEdit`. `adjustHeadings.ts` declares `LeveledHeading` for the three
+declares `LineEdit`. `line/placement.ts` declares `LeveledLine`, because the
+level is the whole of what a placement reads from the outline. `activeEditor.ts`
+declares `EditorHost`, the one field of the plugin that finding an editor takes,
+so that the file it is called from does not end up on both ends of an arrow. `adjustHeadings.ts` declares `LeveledHeading` for the three
 fields an overflow is worked out from. `Heading` and `HeadingEdit` satisfy them
 all structurally without knowing they exist. This is why `core/heading.ts` has one importer
 rather than three, and it reads better than the import did: each file says what
@@ -70,6 +77,9 @@ and nothing has to be passed back up.
 ## The one carve-out
 
 `contracts.ts` declares types and nothing else — no functions, no constants.
+`RejectionReason` lives there for the same reason `AdjustmentOperation` does:
+`core/` decides one and `editor/` is what says it out loud, so the word belongs
+to neither.
 Those declarations are erased at compile time, so importing them couples
 nothing and none of it appears in the shipped bundle. It is vocabulary, not a
 dependency, and it sits outside the tree.
@@ -78,6 +88,60 @@ The exemption is earned per file, not granted by name: the architecture test
 checks that an exempt module contains nothing that can run and imports nothing
 itself. Add one function to `contracts.ts` and it stops qualifying — the tree
 rule starts applying and immediately fails on its seven importers.
+
+## Why `line/` is a folder
+
+A heading adjustment has three scopes — the document, the selection, and the
+current line — and the first two are the same decision with different bounds.
+The third is not, which is why `line/` sits beside the range pipeline rather
+than inside it.
+
+The range pipeline exists to keep a hierarchy intact: it parses a tree, moves
+each heading against its parent and children, and re-indents section bodies for
+anything that overflows. A single line has no tree and no section body. Running
+it through that pipeline with `fromLine === toLine` would work, and would answer
+the wrong question: `parseHeadings` would return one heading with no relatives,
+`assignAdjustedLevels` would floor it at `#`, and the thing that makes the scope
+worth having — that a plain line is a heading of level zero, so an increase
+writes one and a decrease takes it away — would be missing.
+
+Level zero cannot simply be lowered into `levelAdjustment.ts` either. A
+document-wide decrease that stripped every H1 to plain text would be a disaster,
+so the floor has to differ by scope, and a floor that differs by scope is two
+rules wearing one name. `adjustHeadings` keeps its door and branches on
+`levelZero` in the request, which is why `core/` still has exactly one entrance
+and the branch costs the door one line.
+
+`conversion/` never enters the picture: a bullet conversion re-indents a section
+body, and one line is not a section.
+
+The folder holds two files because the current line is asked for in two ways.
+A *shift* moves it by a distance, reading the level it is written at; a
+*placement* names a level outright, reading the enclosing heading instead and
+ignoring the line entirely. `placement.ts` owns that second question — which
+level a `plain`, `sibling` or `child` asks for — and `line.ts` owns the part
+they share, which is reading and rewriting the `#` prefix. That gap after the
+`#`s is why they are here at all rather than reusing `heading.ts` and
+`headingEdits.ts`: those two rewrite a `#` run and leave the whitespace where
+they found it, which is correct for every move that stays a heading and wrong
+for the two that cross level zero.
+
+`marker.ts` is there for the same reason as the gap: a line cannot be a bullet
+and a heading at once, so writing one onto a list item replaces the marker
+rather than following it. It matches the syntax `conversion/listItem.ts` matches
+and keeps only the width, because a conversion re-indents whole sections around
+an item while this one is only working out what the `#`s cover.
+
+Grouping them was also arithmetic, the same as it was for `conversion/`: three
+more children would have put `core/` at ten, past what a reader takes in at
+once. `line.ts` is the door, so `adjustHeadings` asks for a shift or a placement
+and is handed edits either way — the same way it asks for a conversion.
+
+Placements enter through a second function on the door rather than another flag
+on `AdjustmentRequest`. A placement has no direction and no distance, so routing
+one through the request would mean handing `adjustHeadings` an `operation` and a
+`levels` that mean nothing, and a required argument nobody means is how a door
+starts lying about what it takes.
 
 ## Why `conversion/` is a folder
 

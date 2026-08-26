@@ -1,7 +1,13 @@
-import type { AdjustmentOperation, ConversionSettings } from '../contracts';
+import type {
+  AdjustmentOperation,
+  ConversionSettings,
+  LinePlacement,
+  RejectionReason,
+} from '../contracts';
 import type { HeadingEdit } from './headingEdits';
 import { ceilingPolicy, convertOverflow } from './conversion/conversion';
 import { collectHeadingEdits } from './headingEdits';
+import { adjustLineLevel, placeLineLevel } from './line/line';
 import { computeFencedLines } from './fencedLines';
 import { headingBoundaries, parseHeadings } from './headingTree';
 import { assignAdjustedLevels, overflowDepth } from './levelAdjustment';
@@ -25,14 +31,17 @@ export interface AdjustmentRequest {
   toLine?: number;
   /** Which overflow conversions to apply. Both are off when omitted. */
   conversion?: ConversionSettings;
+  /**
+   * Read the line at `fromLine` on its own, counting a line with no `#` as a
+   * heading of level zero — so an increase writes a heading onto plain text and
+   * a decrease takes one back off.
+   *
+   * This narrows the whole request: `toLine` and `conversion` are not read. One
+   * line has no tree to keep intact and no section body to carry into a bullet,
+   * which is exactly what makes it the finest adjustment the plugin offers.
+   */
+  levelZero?: boolean;
 }
-
-/** Why an adjustment produced nothing. Each reason is reported differently. */
-export type RejectionReason =
-  | 'empty-range'
-  | 'zero-levels'
-  | 'negative-levels'
-  | 'no-headings';
 
 export type AdjustmentOutcome =
   | {
@@ -57,6 +66,14 @@ export function adjustHeadings(
   }
 
   const fenced = computeFencedLines(lines);
+
+  // A line that cannot move comes back as nothing to do rather than as a
+  // missing heading — the user is pointing at the line, so it is not lost.
+  if (request.levelZero) {
+    const edits = adjustLineLevel(lines, fenced, fromLine, request.operation, request.levels);
+    return { status: 'adjusted', edits, changedCount: edits.length, truncatedSections: 0 };
+  }
+
   const boundaries = headingBoundaries(lines, fenced);
   const headings = parseHeadings(lines, fromLine, toLine, fenced);
 
@@ -88,6 +105,27 @@ export function adjustHeadings(
     changedCount: kept.filter((heading) => heading.hasChanged).length + converted.changedCount,
     truncatedSections: converted.truncatedSections,
   };
+}
+
+/**
+ * Writes the line at `lineNumber` as a heading placed against the section it
+ * sits in, or as plain text — the second thing a caller can ask of `core/`.
+ *
+ * A placement names the level outright, so none of the range machinery applies:
+ * there is no distance to travel, nothing to reject, and no hierarchy to keep
+ * intact. What it does need is the outline above the line, which is the one
+ * thing a single line cannot see for itself.
+ */
+export function placeLineHeading(
+  lines: readonly string[],
+  lineNumber: number,
+  placement: LinePlacement
+): AdjustmentOutcome {
+  const fenced = computeFencedLines(lines);
+  const above = parseHeadings(lines, 0, lineNumber - 1, fenced);
+  const edits = placeLineLevel(lines, fenced, lineNumber, placement, above);
+
+  return { status: 'adjusted', edits, changedCount: edits.length, truncatedSections: 0 };
 }
 
 /**

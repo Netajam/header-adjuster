@@ -1,9 +1,16 @@
 import type { App, Editor } from 'obsidian';
-import type { AdjustmentOperation, ConversionSettings } from '../contracts';
-import { MarkdownView, Notice } from 'obsidian';
+import type {
+  AdjustmentOperation,
+  ConversionSettings,
+  LinePlacement,
+} from '../contracts';
+import { Notice } from 'obsidian';
+import { activeEditor, requireActiveEditor } from './activeEditor';
 import {
   adjustEditorHeadings,
+  adjustEditorLine,
   adjustEditorSelection,
+  placeEditorLine,
 } from '../editor/headingAdjustmentService';
 import { LevelInputModal } from '../ui/levelInputModal';
 
@@ -74,6 +81,43 @@ export function adjustSelection(
   adjustEditorSelection(editor, operation, context.defaultLevel(operation), context.conversion());
 }
 
+/**
+ * Adjusts the level of the line the cursor is on, and only that line.
+ *
+ * The finest of the three scopes. A line with no `#` counts as a heading of
+ * level zero, so this is also how a heading gets written onto a paragraph in
+ * the first place: increase once for `#`, again for `##`. Decreasing an `#`
+ * takes the heading back off.
+ */
+export function adjustCurrentLine(
+  context: CommandContext,
+  operation: AdjustmentOperation,
+  levels: number = context.defaultLevel(operation)
+): void {
+  const editor = requireActiveEditor(context);
+  if (editor) {
+    adjustEditorLine(editor, operation, levels);
+  }
+}
+
+/**
+ * Writes the current line as a heading placed against the header above it, or
+ * takes its heading away.
+ *
+ * Where `adjustCurrentLine` nudges, this aims: the three placements say what the
+ * line should be rather than how far to move it, so none of them reads the
+ * user's default shift.
+ */
+export function placeCurrentLine(
+  context: CommandContext,
+  placement: LinePlacement
+): void {
+  const editor = requireActiveEditor(context);
+  if (editor) {
+    placeEditorLine(editor, placement);
+  }
+}
+
 /** Adjusts the active selection, or explains why it cannot. */
 export function adjustActiveSelection(
   context: CommandContext,
@@ -86,29 +130,4 @@ export function adjustActiveSelection(
   }
 
   adjustSelection(context, editor, operation);
-}
-
-/**
- * The editor of whichever Markdown view is open, or null.
- *
- * `workspace.activeEditor` tracks focus rather than the workspace: it stays null
- * until a Markdown editor has actually been focused, so a session restored with
- * a file already open reports no editor until the user clicks into the text.
- * Asking which view is active answers the question that was meant. The old
- * reading stays as a fallback for the cases it still covers, such as a Canvas
- * embedding a Markdown editor, where there is no active `MarkdownView`.
- */
-function activeEditor(context: CommandContext): Editor | null {
-  const view = context.app.workspace.getActiveViewOfType(MarkdownView);
-  return view?.editor ?? context.app.workspace.activeEditor?.editor ?? null;
-}
-
-/** The editor the user is in, or null after telling them there isn't one. */
-function requireActiveEditor(context: CommandContext): Editor | null {
-  const editor = activeEditor(context);
-  if (!editor) {
-    new Notice('No active editor found.');
-    return null;
-  }
-  return editor;
 }

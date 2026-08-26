@@ -4,7 +4,9 @@ import { strict as assert } from 'node:assert';
 import {
   adjustActiveDocument,
   adjustActiveSelection,
+  adjustCurrentLine,
   adjustSelection,
+  placeCurrentLine,
 } from '../../src/commands/adjustmentCommands';
 
 /**
@@ -20,13 +22,14 @@ interface EditorChange {
   text: string;
 }
 
-function fakeEditor(lines: string[], selections: unknown[] = []) {
+function fakeEditor(lines: string[], selections: unknown[] = [], cursor = 0) {
   const transactions: Array<{ changes: EditorChange[] }> = [];
 
   return {
     transactions,
     lineCount: () => lines.length,
     getLine: (index: number) => lines[index],
+    getCursor: () => ({ line: cursor, ch: 0 }),
     somethingSelected: () => selections.length > 0,
     listSelections: () => selections,
     transaction: (spec: { changes: EditorChange[] }) => transactions.push(spec),
@@ -171,5 +174,73 @@ describe('finding the editor the user is in', () => {
     adjustActiveSelection(fakeContext(editor, BULLETS, 'view'), 'increase');
 
     assert.equal(written(editor, before), '- A');
+  });
+});
+
+describe('the current-line command finds the editor the user is in', () => {
+  test('adjusts the line the cursor sits on', () => {
+    const before = ['# A', 'some prose'];
+    const editor = fakeEditor([...before], [], 1);
+
+    adjustCurrentLine(fakeContext(editor, {}), 'increase');
+
+    assert.equal(written(editor, before), '# A\n# some prose');
+  });
+
+  test('reads the shift from the plugin when the caller does not name one', () => {
+    const before = ['some prose'];
+    const editor = fakeEditor([...before], [], 0);
+    const context = fakeContext(editor, {});
+    context.defaultLevel = () => 3;
+
+    adjustCurrentLine(context, 'increase');
+
+    assert.equal(written(editor, before), '### some prose');
+  });
+
+  test('needs no selection, unlike the selection command', () => {
+    const before = ['## A'];
+    const editor = fakeEditor([...before], [], 0);
+
+    adjustCurrentLine(fakeContext(editor, {}), 'decrease');
+
+    assert.equal(editor.somethingSelected(), false);
+    assert.equal(written(editor, before), '# A');
+  });
+
+  test('says so rather than throwing when no editor is open', () => {
+    assert.doesNotThrow(() =>
+      adjustCurrentLine(fakeContext(null, {}, 'neither'), 'increase')
+    );
+  });
+});
+
+describe('the placement commands find the editor the user is in', () => {
+  test('places the current line under the heading above it', () => {
+    const before = ['## A', 'some prose'];
+    const editor = fakeEditor([...before], [], 1);
+
+    placeCurrentLine(fakeContext(editor, {}), 'child');
+
+    assert.equal(written(editor, before), '## A\n### some prose');
+  });
+
+  test('never reads the plugin default — a placement has no distance', () => {
+    const before = ['## A', 'some prose'];
+    const editor = fakeEditor([...before], [], 1);
+    const context = fakeContext(editor, {});
+    context.defaultLevel = () => {
+      throw new Error('a placement must not ask for a default shift');
+    };
+
+    placeCurrentLine(context, 'sibling');
+
+    assert.equal(written(editor, before), '## A\n## some prose');
+  });
+
+  test('says so rather than throwing when no editor is open', () => {
+    assert.doesNotThrow(() =>
+      placeCurrentLine(fakeContext(null, {}, 'neither'), 'plain')
+    );
   });
 });

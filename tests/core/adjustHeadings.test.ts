@@ -1,7 +1,8 @@
 import { describe, test } from 'node:test';
 import { strict as assert } from 'node:assert';
 
-import { adjustHeadings } from '../../src/core/adjustHeadings';
+import { adjustHeadings, placeLineHeading } from '../../src/core/adjustHeadings';
+import { applyHeadingEdits } from '../../src/core/headingEdits';
 import { adjust, doc } from '../support/document';
 
 describe('increasing heading levels', () => {
@@ -297,5 +298,347 @@ describe('the edits an adjustment produces', () => {
     assert.deepEqual(outcome.edits, [
       { line: 0, fromColumn: 0, toColumn: 1, text: '##' },
     ]);
+  });
+});
+
+describe('reading one line as level zero', () => {
+  test('writes a heading onto the plain line the request points at', () => {
+    const { text, changedCount } = adjust(
+      doc`
+        # A
+        some prose
+        ## B
+      `,
+      { operation: 'increase', levels: 1, fromLine: 1, toLine: 1, levelZero: true }
+    );
+
+    assert.equal(
+      text,
+      doc`
+        # A
+        # some prose
+        ## B
+      `
+    );
+    assert.equal(changedCount, 1);
+  });
+
+  test('takes a heading back off, leaving the rest of the outline standing', () => {
+    const { text, changedCount } = adjust(
+      doc`
+        # A
+        # B
+        ### C
+      `,
+      { operation: 'decrease', levels: 1, fromLine: 1, toLine: 1, levelZero: true }
+    );
+
+    assert.equal(
+      text,
+      doc`
+        # A
+        B
+        ### C
+      `
+    );
+    assert.equal(changedCount, 1);
+  });
+
+  test('moves the one heading without dragging its children along', () => {
+    const { text, changedCount } = adjust(
+      doc`
+        ## A
+        ### B
+        #### C
+      `,
+      { operation: 'increase', levels: 1, fromLine: 0, toLine: 0, levelZero: true }
+    );
+
+    assert.equal(
+      text,
+      doc`
+        ### A
+        ### B
+        #### C
+      `
+    );
+    assert.equal(changedCount, 1);
+  });
+
+  test('reads fromLine alone, whatever toLine says', () => {
+    const { text } = adjust(
+      doc`
+        first
+        second
+        third
+      `,
+      { operation: 'increase', levels: 1, fromLine: 0, toLine: 2, levelZero: true }
+    );
+
+    assert.equal(
+      text,
+      doc`
+        # first
+        second
+        third
+      `
+    );
+  });
+
+  test('leaves a line inside a code fence as the text it is', () => {
+    const before = '```\nnot a heading\n```';
+    const { text, changedCount } = adjust(before, {
+      operation: 'increase',
+      levels: 1,
+      fromLine: 1,
+      toLine: 1,
+      levelZero: true,
+    });
+
+    assert.equal(text, before);
+    assert.equal(changedCount, 0);
+  });
+
+  test('a line that cannot move is nothing to do, not a missing heading', () => {
+    const outcome = adjustHeadings(['some prose'], {
+      operation: 'decrease',
+      levels: 1,
+      fromLine: 0,
+      toLine: 0,
+      levelZero: true,
+    });
+
+    assert.equal(outcome.status, 'adjusted');
+    assert.deepEqual(outcome.status === 'adjusted' && outcome.edits, []);
+    assert.equal(outcome.status === 'adjusted' && outcome.changedCount, 0);
+  });
+
+  test('never converts, however the conversions are set', () => {
+    const { text, truncatedSections } = adjust(
+      doc`
+        ###### A
+        body
+      `,
+      {
+        operation: 'increase',
+        levels: 1,
+        fromLine: 0,
+        toLine: 0,
+        levelZero: true,
+        conversion: { headingsToBullets: true, bulletsToHeadings: true },
+      }
+    );
+
+    assert.equal(
+      text,
+      doc`
+        ###### A
+        body
+      `
+    );
+    assert.equal(truncatedSections, 0);
+  });
+});
+
+describe('placing the current line against the section it sits in', () => {
+  /** The document as the placement would leave it, with what it changed. */
+  function place(
+    markdown: string,
+    lineNumber: number,
+    placement: 'plain' | 'sibling' | 'child'
+  ): { text: string; changedCount: number } {
+    const lines = markdown.split('\n');
+    const outcome = placeLineHeading(lines, lineNumber, placement);
+
+    assert.equal(outcome.status, 'adjusted', 'a placement never rejects');
+    if (outcome.status !== 'adjusted') {
+      throw new Error('unreachable');
+    }
+
+    return {
+      text: applyHeadingEdits(lines, outcome.edits).join('\n'),
+      changedCount: outcome.changedCount,
+    };
+  }
+
+  test('a sibling takes the level of the heading above it', () => {
+    const { text, changedCount } = place(
+      doc`
+        # A
+        ## B
+        some prose
+      `,
+      2,
+      'sibling'
+    );
+
+    assert.equal(
+      text,
+      doc`
+        # A
+        ## B
+        ## some prose
+      `
+    );
+    assert.equal(changedCount, 1);
+  });
+
+  test('a child sits one level under the heading above it', () => {
+    const { text } = place(
+      doc`
+        # A
+        ## B
+        some prose
+      `,
+      2,
+      'child'
+    );
+
+    assert.equal(
+      text,
+      doc`
+        # A
+        ## B
+        ### some prose
+      `
+    );
+  });
+
+  test('the heading above is the nearest one, not the shallowest', () => {
+    const { text } = place(
+      doc`
+        #### deep
+        ## shallow
+        some prose
+      `,
+      2,
+      'child'
+    );
+
+    assert.equal(
+      text,
+      doc`
+        #### deep
+        ## shallow
+        ### some prose
+      `
+    );
+  });
+
+  test('plain takes the heading away, whatever level it was at', () => {
+    const { text, changedCount } = place(
+      doc`
+        # A
+        ##### B
+        body
+      `,
+      1,
+      'plain'
+    );
+
+    assert.equal(
+      text,
+      doc`
+        # A
+        B
+        body
+      `
+    );
+    assert.equal(changedCount, 1);
+  });
+
+  test('re-levels a line that is already a heading', () => {
+    const { text } = place(
+      doc`
+        ## A
+        ##### B
+      `,
+      1,
+      'sibling'
+    );
+
+    assert.equal(
+      text,
+      doc`
+        ## A
+        ## B
+      `
+    );
+  });
+
+  test('with no heading above, a placement lands on H1', () => {
+    assert.equal(place('some prose', 0, 'sibling').text, '# some prose');
+    assert.equal(place('some prose', 0, 'child').text, '# some prose');
+  });
+
+  test('stops at H6 rather than writing a seventh hash', () => {
+    const { text, changedCount } = place(
+      doc`
+        ###### A
+        some prose
+      `,
+      1,
+      'child'
+    );
+
+    assert.equal(
+      text,
+      doc`
+        ###### A
+        ###### some prose
+      `
+    );
+    assert.equal(changedCount, 1);
+  });
+
+  test('a heading inside a code fence is not the heading above', () => {
+    const { text } = place('```\n### fake\n```\nsome prose', 3, 'child');
+
+    assert.equal(text, '```\n### fake\n```\n# some prose');
+  });
+
+  test('a line inside a code fence is left as the code it is', () => {
+    const { text, changedCount } = place('## A\n```\ncode\n```', 2, 'child');
+
+    assert.equal(text, '## A\n```\ncode\n```');
+    assert.equal(changedCount, 0);
+  });
+
+  test('a bullet placed as a heading loses its bullet', () => {
+    const { text, changedCount } = place(
+      doc`
+        ## Setup
+        - item
+      `,
+      1,
+      'child'
+    );
+
+    assert.equal(
+      text,
+      doc`
+        ## Setup
+        ### item
+      `
+    );
+    assert.equal(changedCount, 1);
+  });
+
+  test('an indented bullet loses its indentation with it', () => {
+    const { text } = place('## Setup\n  - item', 1, 'sibling');
+
+    assert.equal(text, '## Setup\n## item');
+  });
+
+  test('removing a header does not touch a bullet — it is already plain', () => {
+    const { changedCount } = place('## Setup\n- item', 1, 'plain');
+
+    assert.equal(changedCount, 0);
+  });
+
+  test('a line already where the placement wants it is nothing to do', () => {
+    const { changedCount } = place('## A\n### B', 1, 'child');
+
+    assert.equal(changedCount, 0);
   });
 });
