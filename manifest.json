@@ -1,7 +1,7 @@
 {
 	"id": "header-adjuster",
 	"name": "Heading Adjuster",
-	"version": "1.2.0",
+	"version": "1.3.0",
 	"minAppVersion": "0.15.0",
 	"description": "Increase or decrease Markdown heading levels across a whole note, a selection, a given line range, or just the current line.",
 	"author": "Valentin Pelletier",
