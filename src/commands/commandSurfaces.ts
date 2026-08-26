@@ -2,6 +2,7 @@ import type { Editor, Plugin } from 'obsidian';
 import type { AdjustmentOperation, LinePlacement } from '../contracts';
 import type { CommandContext } from './adjustmentCommands';
 import { Menu } from 'obsidian';
+import { PLACEMENT_ICON, SHIFT_ICON } from './icons';
 import {
   adjustActiveDocument,
   adjustActiveSelection,
@@ -20,6 +21,11 @@ import {
  * placement has no direction, so there is nothing to pair it with. The ribbon
  * menu is written out, because its order and its separators are the thing being
  * designed.
+ *
+ * Every entry takes its symbol from `icons.ts` rather than naming one, so a
+ * command and the menu item that runs it cannot come to wear different glyphs.
+ * The palette shows names and does not need them; the mobile toolbar shows
+ * nothing else.
  */
 
 const OPERATIONS: AdjustmentOperation[] = ['increase', 'decrease'];
@@ -29,20 +35,14 @@ const OPERATIONS: AdjustmentOperation[] = ['increase', 'decrease'];
  * names the line because it stands alone in a search, the menu entry does not
  * because the group it sits in already said so.
  */
-const PLACEMENTS: Array<[LinePlacement, string, string, string]> = [
-  ['plain', 'Remove header from current line', 'Remove header', 'x-square'],
+const PLACEMENTS: Array<[LinePlacement, string, string]> = [
+  ['plain', 'Remove header from current line', 'Remove header'],
   [
     'sibling',
     'Make current line a sibling of the header above',
     'Sibling of the header above',
-    'equal',
   ],
-  [
-    'child',
-    'Make current line a child of the header above',
-    'Child of the header above',
-    'corner-down-right',
-  ],
+  ['child', 'Make current line a child of the header above', 'Child of the header above'],
 ];
 
 export function registerCommandSurfaces(
@@ -61,6 +61,7 @@ export function registerCommandSurfaces(
     plugin.addCommand({
       id: `header-current-line-${placement}`,
       name,
+      icon: PLACEMENT_ICON[placement],
       callback: () => placeCurrentLine(context, placement),
     });
   }
@@ -81,24 +82,28 @@ function registerCommandsFor(
   plugin.addCommand({
     id: `${operation}-header-level`,
     name: `${verb(operation)} header level...`,
+    icon: SHIFT_ICON.prompt[operation],
     callback: () => promptForAdjustment(context, operation),
   });
 
   plugin.addCommand({
     id: `${operation}-header-level-default`,
     name: `${verb(operation)} header level by ${levels} (entire document)`,
+    icon: SHIFT_ICON.document[operation],
     callback: () => adjustActiveDocument(context, operation),
   });
 
   plugin.addCommand({
     id: `${operation}-header-level-current-line`,
     name: `${verb(operation)} header level of current line by ${levels}`,
+    icon: SHIFT_ICON.line[operation],
     callback: () => adjustCurrentLine(context, operation),
   });
 
   plugin.addCommand({
     id: `${operation}-header-level-selection-default`,
     name: `${verb(operation)} header level in selection by ${levels}`,
+    icon: SHIFT_ICON.selection[operation],
     editorCheckCallback: (checking: boolean, editor: Editor) => {
       if (!editor.somethingSelected()) {
         return false;
@@ -116,40 +121,46 @@ function buildRibbonMenu(context: CommandContext): Menu {
   const increaseBy = context.defaultLevel('increase');
   const decreaseBy = context.defaultLevel('decrease');
 
-  addMenuItem(menu, 'Increase level...', 'plus-square', () =>
+  addMenuItem(menu, 'Increase level...', SHIFT_ICON.prompt.increase, () =>
     promptForAdjustment(context, 'increase')
   );
-  addMenuItem(menu, 'Decrease level...', 'minus-square', () =>
+  addMenuItem(menu, 'Decrease level...', SHIFT_ICON.prompt.decrease, () =>
     promptForAdjustment(context, 'decrease')
   );
   menu.addSeparator();
 
-  addMenuItem(menu, 'Increase level by 1 (Document)', 'chevron-up', () =>
+  addMenuItem(menu, 'Increase level by 1 (Document)', SHIFT_ICON.document.increase, () =>
     adjustActiveDocument(context, 'increase', 1)
   );
-  addMenuItem(menu, 'Decrease level by 1 (Document)', 'chevron-down', () =>
+  addMenuItem(menu, 'Decrease level by 1 (Document)', SHIFT_ICON.document.decrease, () =>
     adjustActiveDocument(context, 'decrease', 1)
   );
   menu.addSeparator();
 
-  addMenuItem(menu, `Increase level by (+${increaseBy}) (Selection)`, 'plus-square', () =>
-    adjustActiveSelection(context, 'increase')
+  addMenuItem(
+    menu,
+    `Increase level by (+${increaseBy}) (Selection)`,
+    SHIFT_ICON.selection.increase,
+    () => adjustActiveSelection(context, 'increase')
   );
-  addMenuItem(menu, `Decrease level by (-${decreaseBy}) (Selection)`, 'minus-square', () =>
-    adjustActiveSelection(context, 'decrease')
+  addMenuItem(
+    menu,
+    `Decrease level by (-${decreaseBy}) (Selection)`,
+    SHIFT_ICON.selection.decrease,
+    () => adjustActiveSelection(context, 'decrease')
   );
   menu.addSeparator();
 
-  addMenuItem(menu, `Increase level by (+${increaseBy}) (Current line)`, 'plus-square', () =>
+  addMenuItem(menu, `Increase level by (+${increaseBy}) (Current line)`, SHIFT_ICON.line.increase, () =>
     adjustCurrentLine(context, 'increase')
   );
-  addMenuItem(menu, `Decrease level by (-${decreaseBy}) (Current line)`, 'minus-square', () =>
+  addMenuItem(menu, `Decrease level by (-${decreaseBy}) (Current line)`, SHIFT_ICON.line.decrease, () =>
     adjustCurrentLine(context, 'decrease')
   );
   menu.addSeparator();
 
-  for (const [placement, , label, icon] of PLACEMENTS) {
-    addMenuItem(menu, `${label} (Current line)`, icon, () =>
+  for (const [placement, , label] of PLACEMENTS) {
+    addMenuItem(menu, `${label} (Current line)`, PLACEMENT_ICON[placement], () =>
       placeCurrentLine(context, placement)
     );
   }
