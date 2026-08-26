@@ -169,7 +169,10 @@ than leaving each caller to work them out.
 - **`core/`** is the whole adjustment as a function of text. No Obsidian
   import anywhere in it, which is what makes the behaviour testable directly.
 - **`editor/`** is the Obsidian adapter, and the only place a decision becomes
-  an effect: one undoable transaction and one `Notice`.
+  an effect: one undoable transaction, one `Notice`, and where the caret is
+  left. The caret is this layer's business alone — `core/` returns edits and
+  has no idea anyone is looking at the file — and it is set inside the same
+  transaction, so putting it right costs no second undo step.
 - **`settings/`** is the policy — defaults, how a stored value is read back,
   how a default is chosen — with the dialog that edits it behind the door.
   `controls.ts` is the list of settings there are; `settingsTab.ts` is the two

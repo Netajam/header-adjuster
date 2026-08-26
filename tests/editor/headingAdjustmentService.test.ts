@@ -15,17 +15,27 @@ import {
  */
 
 /** The slice of Obsidian's Editor this layer uses, and a record of what it wrote. */
-function fakeEditor(lines: string[], cursor = 0) {
-  const transactions: Array<{ changes: EditorChange[] }> = [];
+function fakeEditor(lines: string[], cursor = 0, ch = 0) {
+  const transactions: Array<Transaction> = [];
 
   return {
     transactions,
     lineCount: () => lines.length,
     getLine: (index: number) => lines[index],
-    getCursor: () => ({ line: cursor, ch: 0 }),
+    getCursor: () => ({ line: cursor, ch }),
     listSelections: () => [],
-    transaction: (spec: { changes: EditorChange[] }) => transactions.push(spec),
+    transaction: (spec: Transaction) => transactions.push(spec),
   };
+}
+
+interface Transaction {
+  changes: EditorChange[];
+  selection?: { from: { line: number; ch: number } };
+}
+
+/** Where the recorded transaction leaves the caret, or null if it says nothing. */
+function caret(editor: ReturnType<typeof fakeEditor>) {
+  return editor.transactions[0]?.selection?.from ?? null;
 }
 
 interface EditorChange {
@@ -42,7 +52,7 @@ const asEditor = (editor: ReturnType<typeof fakeEditor>) => editor as any;
 function written(editor: ReturnType<typeof fakeEditor>, before: string[]): string {
   const lines = [...before];
 
-  for (const change of editor.transactions.flatMap((spec) => spec.changes)) {
+  for (const change of editor.transactions.flatMap((spec: Transaction) => spec.changes)) {
     const line = lines[change.from.line];
     lines[change.from.line] =
       line.slice(0, change.from.ch) + change.text + line.slice(change.to.ch);
@@ -215,5 +225,72 @@ describe('a placement reads the cursor too', () => {
     placeEditorLine(asEditor(editor), 'child', 'sibling');
 
     assert.deepEqual(editor.transactions, []);
+  });
+});
+
+/**
+ * Where the caret is left, which is only ever noticed on an empty line.
+ *
+ * An editor left to itself keeps a caret sitting exactly where text was
+ * inserted in front of that text. On a line with something on it the caret is
+ * almost never at column zero, so it rides along and nobody sees this; on an
+ * empty line column zero is the only place it can be, so every insertion lands
+ * behind it.
+ */
+describe('the caret after writing a heading onto the current line', () => {
+  test('waits after the hash on an empty line, ready to be typed into', () => {
+    const editor = fakeEditor(['## Setup', ''], 1, 0);
+
+    placeEditorLine(asEditor(editor), 'toggle', 'sibling');
+
+    assert.equal(written(editor, ['## Setup', '']), '## Setup\n## ');
+    assert.deepEqual(caret(editor), { line: 1, ch: 3 });
+  });
+
+  test('stays with its text on a line that has some', () => {
+    const editor = fakeEditor(['## Setup', 'some prose'], 1, 5);
+
+    placeEditorLine(asEditor(editor), 'toggle', 'sibling');
+
+    // `some |prose` before, `## some |prose` after: the same character.
+    assert.deepEqual(caret(editor), { line: 1, ch: 8 });
+  });
+
+  test('is not pushed behind the markup when it sits at the head of the line', () => {
+    const editor = fakeEditor(['## Setup', 'some prose'], 1, 0);
+
+    placeEditorLine(asEditor(editor), 'toggle', 'sibling');
+
+    assert.deepEqual(caret(editor), { line: 1, ch: 3 });
+  });
+
+  test('comes back with the text when the heading is taken off', () => {
+    const editor = fakeEditor(['## Setup', '## some prose'], 1, 6);
+
+    placeEditorLine(asEditor(editor), 'toggle', 'sibling');
+
+    // `## som|e prose` before, `som|e prose` after.
+    assert.equal(written(editor, ['## Setup', '## some prose']), '## Setup\nsome prose');
+    assert.deepEqual(caret(editor), { line: 1, ch: 3 });
+  });
+
+  test('shifting the current line moves it too', () => {
+    const editor = fakeEditor([''], 0, 0);
+
+    adjustEditorLine(asEditor(editor), 'increase', 1);
+
+    assert.equal(written(editor, ['']), '# ');
+    assert.deepEqual(caret(editor), { line: 0, ch: 2 });
+  });
+
+  test('a document-wide adjustment leaves the caret to the editor', () => {
+    const editor = fakeEditor(['# A', '## B'], 0, 0);
+
+    adjustEditorHeadings(asEditor(editor), 'increase', 1, {
+      headingsToBullets: false,
+      bulletsToHeadings: false,
+    });
+
+    assert.equal(caret(editor), null);
   });
 });

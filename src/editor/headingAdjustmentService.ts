@@ -76,7 +76,8 @@ export function adjustEditorLine(
       fromLine: line,
       toLine: line,
       levelZero: true,
-    })
+    }),
+    line
   );
 }
 
@@ -93,20 +94,27 @@ export function placeEditorLine(
   placement: LinePlacement,
   target: HeadingPlacement
 ): void {
+  const line = cursorLine(editor);
+
   applyOutcome(
     editor,
-    placeLineHeading(readEditorLines(editor), cursorLine(editor), placement, target)
+    placeLineHeading(readEditorLines(editor), line, placement, target),
+    line
   );
 }
 
 /** Writes what was decided, then says what happened — the two effects, in order. */
-function applyOutcome(editor: Editor, outcome: AdjustmentOutcome): void {
+function applyOutcome(
+  editor: Editor,
+  outcome: AdjustmentOutcome,
+  caretLine?: number
+): void {
   if (outcome.status === 'rejected') {
     reportRejection(outcome.reason);
     return;
   }
 
-  applyLineEdits(editor, outcome.edits);
+  applyLineEdits(editor, outcome.edits, caretLine);
   reportAdjusted(outcome.changedCount, outcome.truncatedSections);
 }
 
