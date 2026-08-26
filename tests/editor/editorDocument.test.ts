@@ -11,15 +11,16 @@ import {
  * The slice of Obsidian's Editor this layer actually uses, stubbed. Anything
  * these tests do not implement is something the adapter must not reach for.
  */
-function fakeEditor(lines: string[], selections: unknown[] = []) {
-  const transactions: unknown[] = [];
+function fakeEditor(lines: string[], selections: unknown[] = [], cursor = { line: 0, ch: 0 }) {
+  const transactions: Array<{ selection?: { from: { line: number; ch: number } } }> = [];
 
   return {
     transactions,
     lineCount: () => lines.length,
     getLine: (index: number) => lines[index],
+    getCursor: () => cursor,
     listSelections: () => selections,
-    transaction: (spec: unknown) => transactions.push(spec),
+    transaction: (spec: never) => transactions.push(spec),
   };
 }
 
@@ -102,5 +103,72 @@ describe('applyLineEdits', () => {
     applyLineEdits(asEditor(editor), []);
 
     assert.deepEqual(editor.transactions, []);
+  });
+});
+
+/**
+ * Where a caret is left when the opening of its line is rewritten.
+ *
+ * An editor left to itself keeps a caret sitting exactly at an insertion in
+ * front of what was inserted. That is right for typing and wrong for markup: a
+ * caret at the head of a line is one waiting to write the heading, not one
+ * asking to be pushed behind the `#`.
+ */
+describe('the caret applyLineEdits asks for', () => {
+  /** The caret a transaction asked for, or null when it asked for none. */
+  function caret(editor: ReturnType<typeof fakeEditor>) {
+    return editor.transactions[0]?.selection?.from ?? null;
+  }
+
+  const write = (text: string, toColumn = 0) => [
+    { line: 1, fromColumn: 0, toColumn, text },
+  ];
+
+  test('lands past what was written when the caret was at the head of the line', () => {
+    const editor = fakeEditor([], [], { line: 1, ch: 0 });
+
+    applyLineEdits(asEditor(editor), write('## '), 1);
+
+    assert.deepEqual(caret(editor), { line: 1, ch: 3 });
+  });
+
+  test('carries the caret along by however much the opening grew', () => {
+    const editor = fakeEditor([], [], { line: 1, ch: 5 });
+
+    applyLineEdits(asEditor(editor), write('## '), 1);
+
+    assert.deepEqual(caret(editor), { line: 1, ch: 8 });
+  });
+
+  test('carries it back by however much the opening shrank', () => {
+    const editor = fakeEditor([], [], { line: 1, ch: 6 });
+
+    applyLineEdits(asEditor(editor), write('', 3), 1);
+
+    assert.deepEqual(caret(editor), { line: 1, ch: 3 });
+  });
+
+  test('a caret inside the markup being removed comes out at the text', () => {
+    const editor = fakeEditor([], [], { line: 1, ch: 1 });
+
+    applyLineEdits(asEditor(editor), write('', 3), 1);
+
+    assert.deepEqual(caret(editor), { line: 1, ch: 0 });
+  });
+
+  test('asks for nothing when no caret line is named', () => {
+    const editor = fakeEditor([], [], { line: 1, ch: 0 });
+
+    applyLineEdits(asEditor(editor), write('## '));
+
+    assert.equal(caret(editor), null);
+  });
+
+  test('asks for nothing when the named line is not one being edited', () => {
+    const editor = fakeEditor([], [], { line: 4, ch: 0 });
+
+    applyLineEdits(asEditor(editor), write('## '), 4);
+
+    assert.equal(caret(editor), null);
   });
 });
