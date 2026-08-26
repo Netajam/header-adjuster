@@ -78,6 +78,21 @@ export interface HeadingAdjusterSettings extends ConversionSettings {
   deepestHeadingLevel: number;
   /** Which level the toggle puts a heading at, and so which one takes it off. */
   toggleTarget: HeadingPlacement;
+  /**
+   * Where the custom commands start, and where they stop.
+   *
+   * Two booleans rather than a pair of named boundaries, because between them
+   * they say everything a persistent range can usefully say: off is the edge of
+   * the note, on is the cursor. A fresh install has both off, which is the whole
+   * document — the same range the document commands already cover, so the
+   * custom pair does something sensible before it is configured.
+   *
+   * A fixed line number is deliberately not offered. A range baked into a hotkey
+   * outlives the note it was set for; the dialog is where a one-off range
+   * belongs.
+   */
+  customRangeStartsAtCursor: boolean;
+  customRangeEndsAtCursor: boolean;
 }
 
 /** Whatever owns the settings and can persist them. */

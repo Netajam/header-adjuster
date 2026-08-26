@@ -7,7 +7,7 @@ import {
   adjustActiveDocument,
   adjustActiveSelection,
   adjustCurrentLine,
-  adjustSelection,
+  adjustCustomRange,
   placeCurrentLine,
   promptForAdjustment,
 } from './adjustmentCommands';
@@ -16,8 +16,8 @@ import {
  * Every way a user can reach the plugin, registered in one call — the door
  * into `commands/`.
  *
- * The palette offers the same four scopes in each direction, so those are
- * generated from the pair, and the three placements from their own table: a
+ * The palette offers the same five scopes in each direction, so those are
+ * generated from the pair, and the four placements from their own table: a
  * placement has no direction, so there is nothing to pair it with. The ribbon
  * menu is written out, because its order and its separators are the thing being
  * designed.
@@ -108,6 +108,16 @@ function registerCommandsFor(
   });
 
   plugin.addCommand({
+    id: `${operation}-header-level-custom-range`,
+    // The range is not in the name because it is not in the command: it lives in
+    // the settings, and a name baked in at registration would go stale the moment
+    // a boundary was changed. `(custom range)` stays true whatever it is set to.
+    name: `${verb(operation)} heading level by ${levels} (custom range)`,
+    icon: SHIFT_ICON.custom[operation],
+    callback: () => adjustCustomRange(context, operation),
+  });
+
+  plugin.addCommand({
     id: `${operation}-header-level-selection-default`,
     name: `${verb(operation)} heading level in selection by ${levels}`,
     icon: SHIFT_ICON.selection[operation],
@@ -116,7 +126,7 @@ function registerCommandsFor(
         return false;
       }
       if (!checking) {
-        adjustSelection(context, editor, operation);
+        adjustActiveSelection(context, operation);
       }
       return true;
     },
@@ -155,6 +165,14 @@ function buildRibbonMenu(context: CommandContext): Menu {
     `Decrease level by (-${decreaseBy}) (Selection)`,
     SHIFT_ICON.selection.decrease,
     () => adjustActiveSelection(context, 'decrease')
+  );
+  menu.addSeparator();
+
+  addMenuItem(menu, `Increase level by (+${increaseBy}) (Custom range)`, SHIFT_ICON.custom.increase, () =>
+    adjustCustomRange(context, 'increase')
+  );
+  addMenuItem(menu, `Decrease level by (-${decreaseBy}) (Custom range)`, SHIFT_ICON.custom.decrease, () =>
+    adjustCustomRange(context, 'decrease')
   );
   menu.addSeparator();
 

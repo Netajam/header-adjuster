@@ -15,7 +15,7 @@ import type { AdjustmentOperation, LinePlacement } from '../contracts';
  */
 
 /** What a shift applies to. The four scopes, as the surfaces name them. */
-export type ShiftScope = 'prompt' | 'document' | 'selection' | 'line';
+export type ShiftScope = 'prompt' | 'document' | 'selection' | 'line' | 'custom';
 
 /**
  * A symbol per scope and direction.
@@ -24,12 +24,18 @@ export type ShiftScope = 'prompt' | 'document' | 'selection' | 'line';
  * is the whole note; the box is the selected block; the bare chevron is a single
  * line taking a single step. Chevron against solid arrow is the widest gap the
  * set has, which is what the two most likely to be pinned together want.
+ *
+ * The ringed chevron is the custom range, and is the one glyph here that cannot
+ * say what it covers — the range is in the settings, not in the command. What it
+ * can say is that it is not one of the four fixed scopes, which is why it
+ * borrows the single-line chevron and rings it rather than inventing a shape.
  */
 export const SHIFT_ICON: Record<ShiftScope, Record<AdjustmentOperation, string>> = {
   prompt: { increase: 'arrow-big-up', decrease: 'arrow-big-down' },
   document: { increase: 'file-plus', decrease: 'file-minus' },
   selection: { increase: 'plus-square', decrease: 'minus-square' },
   line: { increase: 'chevron-up', decrease: 'chevron-down' },
+  custom: { increase: 'circle-chevron-up', decrease: 'circle-chevron-down' },
 };
 
 /**

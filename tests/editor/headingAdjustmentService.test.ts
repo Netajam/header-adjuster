@@ -4,6 +4,7 @@ import { strict as assert } from 'node:assert';
 import {
   adjustEditorHeadings,
   adjustEditorLine,
+  adjustEditorRange,
   placeEditorLine,
 } from '../../src/editor/headingAdjustmentService';
 
@@ -292,5 +293,104 @@ describe('the caret after writing a heading onto the current line', () => {
     });
 
     assert.equal(caret(editor), null);
+  });
+});
+
+describe('a range pinned to the cursor', () => {
+  /**
+   * The four ranges the two booleans spell out. The cursor sits on line 2 of
+   * four headings throughout, so every boundary lands somewhere visible: a
+   * range that ignored one end would take in a heading the assertion names.
+   */
+  const NOTE = ['# A', '# B', '# C', '# D'];
+  const NONE = { headingsToBullets: false, bulletsToHeadings: false };
+
+  function shifted(
+    startsAtCursor: boolean,
+    endsAtCursor: boolean,
+    cursor = 2
+  ): string {
+    const editor = fakeEditor([...NOTE], cursor);
+
+    adjustEditorRange(asEditor(editor), 'increase', 1, NONE, {
+      startsAtCursor,
+      endsAtCursor,
+    });
+
+    return written(editor, NOTE);
+  }
+
+  test('starting at the cursor runs on to the end of the note', () => {
+    assert.equal(shifted(true, false), '# A\n# B\n## C\n## D');
+  });
+
+  test('ending at the cursor runs back to the top of the note', () => {
+    assert.equal(shifted(false, true), '## A\n## B\n## C\n# D');
+  });
+
+  test('neither end pinned is the whole document', () => {
+    assert.equal(shifted(false, false), '## A\n## B\n## C\n## D');
+  });
+
+  test('both ends pinned is the cursor line alone', () => {
+    assert.equal(shifted(true, true), '# A\n# B\n## C\n# D');
+  });
+
+  test('the cursor on the first line still reaches the end', () => {
+    assert.equal(shifted(true, false, 0), '## A\n## B\n## C\n## D');
+  });
+
+  test('the cursor on the last line still reaches the top', () => {
+    assert.equal(shifted(false, true, 3), '## A\n## B\n## C\n## D');
+  });
+
+  /**
+   * The reason `adjustEditorRange` has nothing to reject: an end left off the
+   * cursor is the edge of the document on that side, so whichever line the
+   * cursor is on, the low end is never above the high one.
+   */
+  test('no combination of boundaries can produce a backwards range', () => {
+    for (const cursor of [0, 1, 2, 3]) {
+      for (const starts of [true, false]) {
+        for (const ends of [true, false]) {
+          const editor = fakeEditor([...NOTE], cursor);
+
+          adjustEditorRange(asEditor(editor), 'increase', 1, NONE, {
+            startsAtCursor: starts,
+            endsAtCursor: ends,
+          });
+
+          assert.ok(
+            editor.transactions.length > 0,
+            `cursor ${cursor}, starts ${starts}, ends ${ends} wrote nothing`
+          );
+        }
+      }
+    }
+  });
+
+  test('the conversion still reaches the core through this scope', () => {
+    const before = ['###### A', 'body', '# B'];
+    const editor = fakeEditor([...before], 0);
+
+    adjustEditorRange(asEditor(editor), 'increase', 1, {
+      headingsToBullets: true,
+      bulletsToHeadings: false,
+    }, { startsAtCursor: false, endsAtCursor: true });
+
+    assert.equal(written(editor, before), '- A\nbody\n# B');
+  });
+
+  test('a selection is still read from the editor rather than the cursor', () => {
+    const before = ['# A', '# B'];
+    const editor = fakeEditor([...before], 0);
+    editor.listSelections = () => [
+      { anchor: { line: 1 }, head: { line: 1 } },
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    ] as any;
+
+    adjustEditorRange(asEditor(editor), 'increase', 1, NONE, 'selection');
+
+    assert.equal(written(editor, before), '# A\n## B');
   });
 });

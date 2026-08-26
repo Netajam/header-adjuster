@@ -1,4 +1,4 @@
-import type { App, Editor } from 'obsidian';
+import type { App } from 'obsidian';
 import type {
   AdjustmentOperation,
   ConversionSettings,
@@ -10,7 +10,7 @@ import { activeEditor, requireActiveEditor } from './activeEditor';
 import {
   adjustEditorHeadings,
   adjustEditorLine,
-  adjustEditorSelection,
+  adjustEditorRange,
   placeEditorLine,
 } from '../editor/headingAdjustmentService';
 import { LevelInputModal } from '../ui/levelInputModal';
@@ -35,6 +35,8 @@ export interface CommandContext {
   conversion(): ConversionSettings;
   /** Where the toggle is pointed, for the same reason again. */
   toggleTarget(): HeadingPlacement;
+  /** Which ends of the custom range the user has pinned to the cursor. */
+  customRange(): { startsAtCursor: boolean; endsAtCursor: boolean };
 }
 
 /** Asks for a shift and a range, then adjusts what the user named. */
@@ -75,13 +77,32 @@ export function adjustActiveDocument(
   }
 }
 
-/** Adjusts the headings inside a selection the caller has already confirmed. */
-export function adjustSelection(
+/**
+ * Adjusts the headings between the two boundaries the user configured.
+ *
+ * The parametrizable scope: everything else names its own range in its own
+ * command name, and this one names it in the settings instead. That is what
+ * makes it the only one whose range can be a thing the plugin does not ship —
+ * from the cursor to the end of the note, or from the top of the note back to
+ * the cursor — without another pair of commands per combination.
+ *
+ * Asked for now rather than when the command was registered, so a boundary
+ * changed mid-session takes effect without a reload.
+ */
+export function adjustCustomRange(
   context: CommandContext,
-  editor: Editor,
   operation: AdjustmentOperation
 ): void {
-  adjustEditorSelection(editor, operation, context.defaultLevel(operation), context.conversion());
+  const editor = requireActiveEditor(context);
+  if (editor) {
+    adjustEditorRange(
+      editor,
+      operation,
+      context.defaultLevel(operation),
+      context.conversion(),
+      context.customRange()
+    );
+  }
 }
 
 /**
@@ -134,5 +155,11 @@ export function adjustActiveSelection(
     return;
   }
 
-  adjustSelection(context, editor, operation);
+  adjustEditorRange(
+    editor,
+    operation,
+    context.defaultLevel(operation),
+    context.conversion(),
+    'selection'
+  );
 }

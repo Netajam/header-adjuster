@@ -28,7 +28,11 @@ const RANGE = {
 type LevelKey = 'increaseLevel' | 'decreaseLevel' | 'deepestHeadingLevel';
 
 /** The settings a toggle can be bound to. */
-type ToggleKey = 'headingsToBullets' | 'bulletsToHeadings';
+type ToggleKey =
+  | 'headingsToBullets'
+  | 'bulletsToHeadings'
+  | 'customRangeStartsAtCursor'
+  | 'customRangeEndsAtCursor';
 
 /** Where the toggle command may be pointed, in the user's words. */
 export const TOGGLE_TARGETS: Record<HeadingPlacement, string> = {
@@ -80,6 +84,19 @@ export const SETTINGS: ControlDefinition[] = [
       + 'it takes back off. A line already at that level loses its heading; a '
       + 'line anywhere else is moved to it first.',
     control: { type: 'dropdown', key: 'toggleTarget', options: TOGGLE_TARGETS },
+  },
+  {
+    name: 'Custom range starts at the cursor',
+    desc: 'Where the two "custom range" commands begin. Off means the top of the '
+      + 'note.',
+    control: { type: 'toggle', key: 'customRangeStartsAtCursor' },
+  },
+  {
+    name: 'Custom range ends at the cursor',
+    desc: 'Where the two "custom range" commands stop. Off means the end of the '
+      + 'note. With the setting above off as well, the custom commands cover the '
+      + 'whole document.',
+    control: { type: 'toggle', key: 'customRangeEndsAtCursor' },
   },
   {
     name: 'Convert headings past the deepest level into bullets',
