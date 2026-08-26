@@ -58,7 +58,7 @@ export interface ConversionSettings {
 }
 
 /** The preferences a user can set for the plugin. */
-export interface HeaderAdjusterSettings extends ConversionSettings {
+export interface HeadingAdjusterSettings extends ConversionSettings {
   increaseLevel: number;
   decreaseLevel: number;
   deepestHeadingLevel: number;
@@ -66,6 +66,6 @@ export interface HeaderAdjusterSettings extends ConversionSettings {
 
 /** Whatever owns the settings and can persist them. */
 export interface SettingsHost {
-  settings: HeaderAdjusterSettings;
+  settings: HeadingAdjusterSettings;
   saveSettings(): Promise<void>;
 }

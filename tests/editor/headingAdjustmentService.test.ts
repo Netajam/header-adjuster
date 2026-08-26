@@ -199,7 +199,7 @@ describe('a placement reads the cursor too', () => {
     assert.equal(written(editor, before), '## A\n### some prose\n### C');
   });
 
-  test('removes the header from the line the cursor is on', () => {
+  test('removes the heading from the line the cursor is on', () => {
     const before = ['## A', '#### B'];
     const editor = fakeEditor([...before], 1);
 

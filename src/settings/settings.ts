@@ -1,10 +1,10 @@
 import type { Plugin } from 'obsidian';
 import type {
   AdjustmentOperation,
-  HeaderAdjusterSettings,
+  HeadingAdjusterSettings,
   SettingsHost,
 } from '../contracts';
-import { HeaderAdjusterSettingTab } from './settingsTab';
+import { HeadingAdjusterSettingTab } from './settingsTab';
 
 /**
  * The user's preferences — the door into `settings/`.
@@ -14,7 +14,7 @@ import { HeaderAdjusterSettingTab } from './settingsTab';
  * read back, how a default is chosen, and how the tab gets installed.
  */
 
-const DEFAULT_SETTINGS: HeaderAdjusterSettings = {
+const DEFAULT_SETTINGS: HeadingAdjusterSettings = {
   increaseLevel: 1,
   decreaseLevel: 1,
   // Both off: each rewrites more than a heading line, so neither is something
@@ -26,16 +26,16 @@ const DEFAULT_SETTINGS: HeaderAdjusterSettings = {
 };
 
 /** The stored settings, with anything missing filled in from the defaults. */
-export async function readSettings(plugin: Plugin): Promise<HeaderAdjusterSettings> {
+export async function readSettings(plugin: Plugin): Promise<HeadingAdjusterSettings> {
   // loadData() is typed `any`, and a vault may hold settings written by an
   // older version of the plugin, so what comes back is a partial at best.
-  const stored = (await plugin.loadData()) as Partial<HeaderAdjusterSettings> | null;
+  const stored = (await plugin.loadData()) as Partial<HeadingAdjusterSettings> | null;
   return { ...DEFAULT_SETTINGS, ...stored };
 }
 
 /** The shift to use when the user does not name one for this operation. */
 export function defaultLevelFor(
-  settings: HeaderAdjusterSettings,
+  settings: HeadingAdjusterSettings,
   operation: AdjustmentOperation
 ): number {
   return operation === 'increase' ? settings.increaseLevel : settings.decreaseLevel;
@@ -43,5 +43,5 @@ export function defaultLevelFor(
 
 /** Adds the settings tab to Obsidian's settings dialog. */
 export function installSettingsTab(plugin: Plugin & SettingsHost): void {
-  plugin.addSettingTab(new HeaderAdjusterSettingTab(plugin.app, plugin));
+  plugin.addSettingTab(new HeadingAdjusterSettingTab(plugin.app, plugin));
 }

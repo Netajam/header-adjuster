@@ -42,12 +42,12 @@ type ControlDefinition = {
 const SETTINGS: ControlDefinition[] = [
   {
     name: 'Default increase level',
-    desc: 'The default number of levels to increase headers by.',
+    desc: 'The default number of levels to increase headings by.',
     control: { type: 'slider', key: 'increaseLevel', ...RANGE.level },
   },
   {
     name: 'Default decrease level',
-    desc: 'The default number of levels to decrease headers by.',
+    desc: 'The default number of levels to decrease headings by.',
     control: { type: 'slider', key: 'decreaseLevel', ...RANGE.level },
   },
   {
@@ -74,7 +74,7 @@ const SETTINGS: ControlDefinition[] = [
   },
 ];
 
-export class HeaderAdjusterSettingTab extends PluginSettingTab {
+export class HeadingAdjusterSettingTab extends PluginSettingTab {
   private readonly host: SettingsHost;
 
   constructor(app: App, plugin: Plugin & SettingsHost) {

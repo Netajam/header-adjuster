@@ -26,6 +26,12 @@ import {
  * command and the menu item that runs it cannot come to wear different glyphs.
  * The palette shows names and does not need them; the mobile toolbar shows
  * nothing else.
+ *
+ * The `id` of every command still says `header`, from before the plugin was
+ * renamed to Heading Adjuster. A user's custom hotkey is stored against
+ * `header-adjuster:<id>`, so renaming one of these unbinds that hotkey with no
+ * error and no way for the user to see why. The names are what people read;
+ * those say `heading`. Leave the ids as they are.
  */
 
 const OPERATIONS: AdjustmentOperation[] = ['increase', 'decrease'];
@@ -36,20 +42,20 @@ const OPERATIONS: AdjustmentOperation[] = ['increase', 'decrease'];
  * because the group it sits in already said so.
  */
 const PLACEMENTS: Array<[LinePlacement, string, string]> = [
-  ['plain', 'Remove header from current line', 'Remove header'],
+  ['plain', 'Remove heading from current line', 'Remove heading'],
   [
     'sibling',
-    'Make current line a sibling of the header above',
-    'Sibling of the header above',
+    'Make current line a sibling of the heading above',
+    'Sibling of the heading above',
   ],
-  ['child', 'Make current line a child of the header above', 'Child of the header above'],
+  ['child', 'Make current line a child of the heading above', 'Child of the heading above'],
 ];
 
 export function registerCommandSurfaces(
   plugin: Plugin,
   context: CommandContext
 ): void {
-  plugin.addRibbonIcon('heading', 'Adjust headers', (event) => {
+  plugin.addRibbonIcon('heading', 'Adjust headings', (event) => {
     buildRibbonMenu(context).showAtMouseEvent(event);
   });
 
@@ -81,28 +87,28 @@ function registerCommandsFor(
 
   plugin.addCommand({
     id: `${operation}-header-level`,
-    name: `${verb(operation)} header level...`,
+    name: `${verb(operation)} heading level...`,
     icon: SHIFT_ICON.prompt[operation],
     callback: () => promptForAdjustment(context, operation),
   });
 
   plugin.addCommand({
     id: `${operation}-header-level-default`,
-    name: `${verb(operation)} header level by ${levels} (entire document)`,
+    name: `${verb(operation)} heading level by ${levels} (entire document)`,
     icon: SHIFT_ICON.document[operation],
     callback: () => adjustActiveDocument(context, operation),
   });
 
   plugin.addCommand({
     id: `${operation}-header-level-current-line`,
-    name: `${verb(operation)} header level of current line by ${levels}`,
+    name: `${verb(operation)} heading level of current line by ${levels}`,
     icon: SHIFT_ICON.line[operation],
     callback: () => adjustCurrentLine(context, operation),
   });
 
   plugin.addCommand({
     id: `${operation}-header-level-selection-default`,
-    name: `${verb(operation)} header level in selection by ${levels}`,
+    name: `${verb(operation)} heading level in selection by ${levels}`,
     icon: SHIFT_ICON.selection[operation],
     editorCheckCallback: (checking: boolean, editor: Editor) => {
       if (!editor.somethingSelected()) {

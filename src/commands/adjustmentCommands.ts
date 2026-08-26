@@ -101,7 +101,7 @@ export function adjustCurrentLine(
 }
 
 /**
- * Writes the current line as a heading placed against the header above it, or
+ * Writes the current line as a heading levelled against the one above it, or
  * takes its heading away.
  *
  * Where `adjustCurrentLine` nudges, this aims: the three placements say what the
@@ -125,7 +125,7 @@ export function adjustActiveSelection(
 ): void {
   const editor = activeEditor(context);
   if (!editor || !editor.somethingSelected()) {
-    new Notice('Select text containing headers first.');
+    new Notice('Select text containing headings first.');
     return;
   }
 

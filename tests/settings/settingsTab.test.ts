@@ -1,9 +1,9 @@
 import { describe, test } from 'node:test';
 import { strict as assert } from 'node:assert';
 
-import type { HeaderAdjusterSettings } from '../../src/contracts';
+import type { HeadingAdjusterSettings } from '../../src/contracts';
 import { readSettings } from '../../src/settings/settings';
-import { HeaderAdjusterSettingTab } from '../../src/settings/settingsTab';
+import { HeadingAdjusterSettingTab } from '../../src/settings/settingsTab';
 
 /**
  * What Obsidian 1.13 and later ask the tab, without asking it to draw anything.
@@ -14,12 +14,12 @@ import { HeaderAdjusterSettingTab } from '../../src/settings/settingsTab';
  * of them touches the DOM.
  */
 
-async function defaults(): Promise<HeaderAdjusterSettings> {
+async function defaults(): Promise<HeadingAdjusterSettings> {
   return readSettings({ loadData: async () => null } as never);
 }
 
-function tabFor(settings: HeaderAdjusterSettings) {
-  const saves: HeaderAdjusterSettings[] = [];
+function tabFor(settings: HeadingAdjusterSettings) {
+  const saves: HeadingAdjusterSettings[] = [];
   const host = {
     settings,
     saveSettings: async () => {
@@ -27,7 +27,7 @@ function tabFor(settings: HeaderAdjusterSettings) {
     },
   };
 
-  return { tab: new HeaderAdjusterSettingTab(null as never, host as never), saves };
+  return { tab: new HeadingAdjusterSettingTab(null as never, host as never), saves };
 }
 
 /**
@@ -37,7 +37,7 @@ function tabFor(settings: HeaderAdjusterSettings) {
  * groups, pages, actions — so this asserts its way down to the two kinds this
  * plugin actually returns before any test reads a key off one.
  */
-function controls(tab: HeaderAdjusterSettingTab) {
+function controls(tab: HeadingAdjusterSettingTab) {
   return tab.getSettingDefinitions().map((definition) => {
     const control = 'control' in definition ? definition.control : undefined;
     assert.ok(control, 'every definition binds a control');

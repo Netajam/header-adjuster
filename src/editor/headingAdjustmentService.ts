@@ -135,7 +135,7 @@ export function adjustEditorSelection(
  */
 function reportRejection(reason: RejectionReason): void {
   if (reason === 'no-headings') {
-    new Notice('No headers found in the specified range/selection.');
+    new Notice('No headings found in the specified range/selection.');
   }
 }
 
@@ -148,7 +148,7 @@ function reportRejection(reason: RejectionReason): void {
  */
 function reportAdjusted(changedCount: number, truncatedSections: number): void {
   if (changedCount === 0) {
-    new Notice('No header levels needed adjustment in the range.');
+    new Notice('No heading levels needed adjustment in the range.');
     return;
   }
 
@@ -158,5 +158,5 @@ function reportAdjusted(changedCount: number, truncatedSections: number): void {
         ' only the selected lines were indented.'
       : '';
 
-  new Notice(`Adjusted ${changedCount} header(s).${cut}`);
+  new Notice(`Adjusted ${changedCount} heading(s).${cut}`);
 }

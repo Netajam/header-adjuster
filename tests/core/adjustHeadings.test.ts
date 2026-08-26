@@ -630,7 +630,7 @@ describe('placing the current line against the section it sits in', () => {
     assert.equal(text, '## Setup\n## item');
   });
 
-  test('removing a header does not touch a bullet — it is already plain', () => {
+  test('removing a heading does not touch a bullet — it is already plain', () => {
     const { changedCount } = place('## Setup\n- item', 1, 'plain');
 
     assert.equal(changedCount, 0);

@@ -1,9 +1,9 @@
 {
 	"id": "header-adjuster",
-	"name": "Header Adjuster",
+	"name": "Heading Adjuster",
 	"version": "1.2.0",
 	"minAppVersion": "0.15.0",
-	"description": "Increase or decrease Markdown header levels across a whole note, a selection, a given line range, or just the current line.",
+	"description": "Increase or decrease Markdown heading levels across a whole note, a selection, a given line range, or just the current line.",
 	"author": "Valentin Pelletier",
 	"authorUrl": "https://github.com/Netajam",
 	"fundingUrl": "https://github.com/sponsors/Netajam",

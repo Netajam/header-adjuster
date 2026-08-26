@@ -37,7 +37,7 @@ export class LevelInputModal extends Modal {
   onOpen(): void {
     const { contentEl } = this;
     contentEl.empty();
-    this.titleEl.setText('Adjust header levels');
+    this.titleEl.setText('Adjust heading levels');
 
     this.form = new LevelInputForm(
       contentEl,

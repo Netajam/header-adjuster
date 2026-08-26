@@ -1,7 +1,7 @@
 import type {
   AdjustmentOperation,
   ConversionSettings,
-  HeaderAdjusterSettings,
+  HeadingAdjusterSettings,
   SettingsHost,
 } from './contracts';
 import { Plugin } from 'obsidian';
@@ -21,8 +21,8 @@ import {
  * file at the top of the graph instead of in a loop with them. Passing `this`
  * below is where TypeScript checks it still satisfies both.
  */
-export default class HeaderAdjusterPlugin extends Plugin implements SettingsHost {
-  settings: HeaderAdjusterSettings;
+export default class HeadingAdjusterPlugin extends Plugin implements SettingsHost {
+  settings: HeadingAdjusterSettings;
 
   async onload(): Promise<void> {
     await this.loadSettings();

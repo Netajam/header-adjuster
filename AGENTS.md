@@ -1,6 +1,6 @@
-# header-adjuster
+# heading-adjuster
 
-An Obsidian plugin for adjusting markdown header levels.
+An Obsidian plugin for adjusting markdown heading levels.
 
 ## Agent skills
 

@@ -2,7 +2,7 @@
 
 Issues and PRDs for this repo live as markdown files in `.scratch/`.
 
-> This repo has a GitHub remote (`Netajam/header-adjuster`) with its own open
+> This repo has a GitHub remote (`Netajam/heading-adjuster`) with its own open
 > issues, and `gh` is authenticated. That is **not** the tracker for these
 > skills. Never run `gh issue create`, never comment on or label GitHub issues,
 > and never publish `.scratch/` content to GitHub unless explicitly asked.

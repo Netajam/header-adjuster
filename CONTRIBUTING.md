@@ -1,7 +1,7 @@
-# Contributing to Header Adjuster
+# Contributing to Heading Adjuster
 
 Thanks for taking an interest. Issues and pull requests are both welcome on
-[the GitHub repository](https://github.com/Netajam/header-adjuster).
+[the GitHub repository](https://github.com/Netajam/heading-adjuster).
 
 ## Reporting a bug
 
@@ -24,13 +24,14 @@ overflow, conversion — and a request phrased in those terms is quicker to plac
 ## Setting up
 
 ```bash
-git clone https://github.com/Netajam/header-adjuster.git
-cd header-adjuster
+git clone https://github.com/Netajam/heading-adjuster.git
+cd heading-adjuster
 npm install
 ```
 
 To develop against a real vault, clone into
-`<vault>/.obsidian/plugins/header-adjuster` and run `npm run dev`, which watches
+`<vault>/.obsidian/plugins/header-adjuster` — the plugin id, which the rename to
+Heading Adjuster deliberately left alone — and run `npm run dev`, which watches
 the sources and rebuilds `main.js` in place. Reload Obsidian to pick up a build.
 
 ## Checks

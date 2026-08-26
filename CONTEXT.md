@@ -1,4 +1,4 @@
-# Header Adjuster
+# Heading Adjuster
 
 An Obsidian plugin that shifts markdown heading levels across a document, a
 selection, or the current line, preserving the relative hierarchy between
