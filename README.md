@@ -268,6 +268,9 @@ conversion**:
 - **Convert bullets back into headings**: When decreasing, turn list items back
   into headings. This cannot tell a bullet the plugin created from one you typed
   yourself, so every list in range is converted — hand-written ones included.
+  An item takes one decrease per level of nesting to reach a heading, so a
+  heading that overflowed several levels past the ceiling needs the same number
+  of decreases to come back.
 
 ### Example Usage
 
