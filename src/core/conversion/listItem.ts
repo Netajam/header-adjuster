@@ -9,6 +9,16 @@
 /** Indentation, an unordered marker, whitespace, then the item's text. */
 const LIST_ITEM_PATTERN = /^([ \t]*)([-*+])([ \t]+)(.*)$/;
 
+/**
+ * One level of nesting in columns, matching the unit `bulletConversion.ts`
+ * writes. Restated rather than imported: naming it across would give that file
+ * a second parent, and this is the only other place the width is read.
+ *
+ * It is read in one case only — an item indented with nothing open above it —
+ * so a list that indents by tabs or by four spaces is never measured by it.
+ */
+const ORPHAN_INDENT_UNIT = 2;
+
 /** A list item line, taken apart into the pieces a conversion needs. */
 export interface ListItem {
   /** The whitespace the line opens with, verbatim. */
@@ -57,6 +67,15 @@ export interface NestedItem {
  * amount. Dividing columns by an assumed width gets a tab-indented list wrong in
  * the worst way — it reads every child as another root.
  *
+ * With one exception, which is what `ORPHAN_INDENT_UNIT` is for: an item
+ * indented with nothing open above it. Relative depth has nothing to measure
+ * there and reads it as a root, so an item the forward conversion indented to
+ * record its overflow depth comes back as though it had never been indented at
+ * all — the round trip loses a level per level of overflow. The indent is the
+ * only record of that depth left, so it is read, and the levels it implies are
+ * opened behind the item so anything nested under it still counts up from where
+ * it sits.
+ *
  * `enclosing` carries the indent widths the item is nested inside, so a caller
  * lifting it out by some number of levels knows the column to put it back at
  * without having to guess the document's indent style.
@@ -79,6 +98,14 @@ export function nestedItems(
     const indent = item.indent.length;
     while (open.length > 0 && indent <= open[open.length - 1]) {
       open.pop();
+    }
+
+    // Nothing above it to be a child of, yet indented anyway: the levels it is
+    // standing on are implied rather than written, so they are opened here.
+    if (open.length === 0) {
+      for (let column = 0; column + ORPHAN_INDENT_UNIT <= indent; column += ORPHAN_INDENT_UNIT) {
+        open.push(column);
+      }
     }
 
     items.push({ line, level: open.length, item, enclosing: [...open] });

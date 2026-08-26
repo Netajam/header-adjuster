@@ -353,3 +353,98 @@ describe('nesting is relative, not a column count', () => {
     assert.equal(text, '##### A\n###### B\n- C');
   });
 });
+
+describe('an item indented with nothing above it', () => {
+  /**
+   * The one shape relative nesting cannot read, and the one the forward
+   * conversion writes: a heading that overflows the ceiling by more than a
+   * level becomes a bullet indented to record how far it went, with no bullet
+   * above it to be a child of. Counting enclosing items reads that as a root,
+   * so the level the indent was recording is lost and the round trip comes back
+   * shallow — a level per level of overflow.
+   */
+  const CEILING_4 = { headingsToBullets: true, bulletsToHeadings: true, deepestHeadingLevel: 4 };
+
+  function roundTrip(markdown: string, levels: number): { out: string; back: string } {
+    const out = adjust(markdown, { operation: 'increase', levels, conversion: CEILING_4 }).text;
+    return {
+      out,
+      back: adjust(out, { operation: 'decrease', levels, conversion: CEILING_4 }).text,
+    };
+  }
+
+  test('a heading two past the ceiling comes back to the level it left', () => {
+    const { out, back } = roundTrip('#### A\nbody', 2);
+
+    assert.equal(out, '  - A\n    body');
+    assert.equal(back, '#### A\nbody');
+  });
+
+  test('three past the ceiling comes back too', () => {
+    const { out, back } = roundTrip('#### A\nbody', 3);
+
+    assert.equal(out, '    - A\n      body');
+    assert.equal(back, '#### A\nbody');
+  });
+
+  test('one past the ceiling is unaffected — it was never indented', () => {
+    const { out, back } = roundTrip('#### A\nbody', 1);
+
+    assert.equal(out, '- A\n  body');
+    assert.equal(back, '#### A\nbody');
+  });
+
+  /**
+   * The bug this fixes, stated as the asymmetry it was: the same bullet at the
+   * same indent used to lift differently depending on whether something above
+   * it happened to make it read as nested.
+   */
+  test('an indented item lifts the same whether or not an item precedes it', () => {
+    const request = { operation: 'decrease' as const, levels: 2, conversion: CEILING_4 };
+
+    const alone = adjust('  - A', request).text;
+    const preceded = adjust('- x\n  - A', request).text;
+
+    assert.equal(alone, '#### A');
+    assert.match(preceded, /#### A$/);
+  });
+
+  test('a bullet deeper than the decrease can lift walks back a level at a time', () => {
+    const request = { operation: 'decrease' as const, levels: 1, conversion: CEILING_4 };
+
+    const first = adjust('    - A', request).text;
+    const second = adjust(first, request).text;
+    const third = adjust(second, request).text;
+
+    assert.equal(first, '  - A');
+    assert.equal(second, '- A');
+    assert.equal(third, '#### A');
+  });
+});
+
+describe('the orphan rule leaves relative nesting alone', () => {
+  /**
+   * The indent is only ever measured when there is no enclosing item to count,
+   * so a list that starts at column zero — which is every list these tests
+   * describe — is read exactly as before, whatever it indents by.
+   */
+  const request = { operation: 'decrease' as const, levels: 1, conversion: TO_HEADINGS };
+
+  test('a tab-nested list is untouched by it', () => {
+    assert.equal(adjust('- A\n\t- B\n\t\t- C', request).text, '###### A\n- B\n\t- C');
+  });
+
+  test('a four-space-nested list is untouched by it', () => {
+    assert.equal(adjust('- A\n    - B\n        - C', request).text, '###### A\n- B\n    - C');
+  });
+
+  /**
+   * A list whose first item is indented does change: it now moves out a level
+   * rather than lifting to a heading, which is what the same item does
+   * everywhere else. Indentation means one thing now, not two depending on
+   * what precedes it.
+   */
+  test('a list that starts indented moves out rather than lifting', () => {
+    assert.equal(adjust('  - a\n    - b', request).text, '- a\n  - b');
+  });
+});
