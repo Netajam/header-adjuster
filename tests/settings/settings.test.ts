@@ -18,6 +18,8 @@ describe('defaultLevelFor', () => {
       bulletsToHeadings: false,
       deepestHeadingLevel: 6,
       toggleTarget: 'sibling',
+      customRangeTop: 'note-start',
+      customRangeBottom: 'note-end',
     };
 
     assert.equal(defaultLevelFor(settings, 'increase'), 2);
@@ -34,6 +36,8 @@ describe('readSettings', () => {
       bulletsToHeadings: false,
       deepestHeadingLevel: 6,
       toggleTarget: 'sibling',
+      customRangeTop: 'note-start',
+      customRangeBottom: 'note-end',
     });
   });
 
@@ -52,6 +56,8 @@ describe('readSettings', () => {
       bulletsToHeadings: false,
       deepestHeadingLevel: 6,
       toggleTarget: 'sibling',
+      customRangeTop: 'note-start',
+      customRangeBottom: 'note-end',
     });
   });
 });

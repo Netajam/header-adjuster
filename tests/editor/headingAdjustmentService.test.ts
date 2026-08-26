@@ -4,6 +4,7 @@ import { strict as assert } from 'node:assert';
 import {
   adjustEditorHeadings,
   adjustEditorLine,
+  adjustEditorRange,
   placeEditorLine,
 } from '../../src/editor/headingAdjustmentService';
 
@@ -292,5 +293,98 @@ describe('the caret after writing a heading onto the current line', () => {
     });
 
     assert.equal(caret(editor), null);
+  });
+});
+
+describe('a range pinned to the cursor', () => {
+  /**
+   * The four ranges the two boundaries spell out. The cursor sits on line 2 of
+   * four headings throughout, so every boundary lands somewhere visible: a
+   * range that ignored one end would take in a heading the assertion names.
+   */
+  const NOTE = ['# A', '# B', '# C', '# D'];
+  const NONE = { headingsToBullets: false, bulletsToHeadings: false };
+
+  function shifted(
+    top: 'note-start' | 'cursor',
+    bottom: 'cursor' | 'note-end',
+    cursor = 2
+  ): string {
+    const editor = fakeEditor([...NOTE], cursor);
+
+    adjustEditorRange(asEditor(editor), 'increase', 1, NONE, { top, bottom });
+
+    return written(editor, NOTE);
+  }
+
+  test('a top of the cursor runs on to the end of the note', () => {
+    assert.equal(shifted('cursor', 'note-end'), '# A\n# B\n## C\n## D');
+  });
+
+  test('a bottom of the cursor runs back to the top of the note', () => {
+    assert.equal(shifted('note-start', 'cursor'), '## A\n## B\n## C\n# D');
+  });
+
+  test('the two note edges are the whole document', () => {
+    assert.equal(shifted('note-start', 'note-end'), '## A\n## B\n## C\n## D');
+  });
+
+  test('the cursor at both ends is the cursor line alone', () => {
+    assert.equal(shifted('cursor', 'cursor'), '# A\n# B\n## C\n# D');
+  });
+
+  test('the cursor on the first line still reaches the end', () => {
+    assert.equal(shifted('cursor', 'note-end', 0), '## A\n## B\n## C\n## D');
+  });
+
+  test('the cursor on the last line still reaches the top', () => {
+    assert.equal(shifted('note-start', 'cursor', 3), '## A\n## B\n## C\n## D');
+  });
+
+  /**
+   * The reason `adjustEditorRange` has nothing to reject, and the reason the
+   * two ends are offered different options: whichever line the cursor is on,
+   * the top never lands below the bottom.
+   */
+  test('no pair of boundaries can produce a backwards range', () => {
+    for (const cursor of [0, 1, 2, 3]) {
+      for (const top of ['note-start', 'cursor'] as const) {
+        for (const bottom of ['cursor', 'note-end'] as const) {
+          const editor = fakeEditor([...NOTE], cursor);
+
+          adjustEditorRange(asEditor(editor), 'increase', 1, NONE, { top, bottom });
+
+          assert.ok(
+            editor.transactions.length > 0,
+            `cursor ${cursor}, top ${top}, bottom ${bottom} wrote nothing`
+          );
+        }
+      }
+    }
+  });
+
+  test('the conversion still reaches the core through this scope', () => {
+    const before = ['###### A', 'body', '# B'];
+    const editor = fakeEditor([...before], 0);
+
+    adjustEditorRange(asEditor(editor), 'increase', 1, {
+      headingsToBullets: true,
+      bulletsToHeadings: false,
+    }, { top: 'note-start', bottom: 'cursor' });
+
+    assert.equal(written(editor, before), '- A\nbody\n# B');
+  });
+
+  test('a selection is still read from the editor rather than the cursor', () => {
+    const before = ['# A', '# B'];
+    const editor = fakeEditor([...before], 0);
+    editor.listSelections = () => [
+      { anchor: { line: 1 }, head: { line: 1 } },
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    ] as any;
+
+    adjustEditorRange(asEditor(editor), 'increase', 1, NONE, 'selection');
+
+    assert.equal(written(editor, before), '# A\n## B');
   });
 });

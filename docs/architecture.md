@@ -93,8 +93,9 @@ rule starts applying and immediately fails on its seven importers.
 
 ## Why `line/` is a folder
 
-A heading adjustment has three scopes — the document, the selection, and the
-current line — and the first two are the same decision with different bounds.
+A heading adjustment has four scopes — the document, the selection, a range
+pinned to the cursor, and the current line — and the first three are the same
+decision with different bounds.
 The third is not, which is why `line/` sits beside the range pipeline rather
 than inside it.
 

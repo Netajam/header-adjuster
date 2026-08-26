@@ -26,14 +26,10 @@ export default class HeadingAdjusterPlugin extends Plugin implements SettingsHos
   settings: HeadingAdjusterSettings;
 
   async onload(): Promise<void> {
-    await this.loadSettings();
+    this.settings = await readSettings(this);
 
     registerCommandSurfaces(this, this);
     installSettingsTab(this);
-  }
-
-  async loadSettings(): Promise<void> {
-    this.settings = await readSettings(this);
   }
 
   async saveSettings(): Promise<void> {
@@ -53,5 +49,13 @@ export default class HeadingAdjusterPlugin extends Plugin implements SettingsHos
   /** Where the toggle is pointed. The third thing a command may ask. */
   toggleTarget(): HeadingPlacement {
     return this.settings.toggleTarget;
+  }
+
+  /** The two boundaries of the custom range. The fourth thing a command asks. */
+  customRange(): { top: 'note-start' | 'cursor'; bottom: 'cursor' | 'note-end' } {
+    return {
+      top: this.settings.customRangeTop,
+      bottom: this.settings.customRangeBottom,
+    };
   }
 }

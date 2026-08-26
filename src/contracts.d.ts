@@ -78,6 +78,26 @@ export interface HeadingAdjusterSettings extends ConversionSettings {
   deepestHeadingLevel: number;
   /** Which level the toggle puts a heading at, and so which one takes it off. */
   toggleTarget: HeadingPlacement;
+  /**
+   * Where the custom commands start, and where they stop.
+   *
+   * Each end names the boundary it sits on rather than answering a yes/no about
+   * the cursor: a toggle has to assert one state in its label and describe the
+   * other in its help text, which reads as a contradiction whichever way it is
+   * worded. `'cursor'` on both ends is the cursor line alone, and the pair
+   * defaults to the whole note — the same range the document commands cover, so
+   * the custom pair does something sensible before it is configured.
+   *
+   * The two ends take different options on purpose. Nothing above the top or
+   * below the bottom is offered, so a backwards range cannot be configured and
+   * there is none to reject.
+   *
+   * A fixed line number is deliberately not offered either. A range baked into a
+   * hotkey outlives the note it was set for; the dialog is where a one-off range
+   * belongs.
+   */
+  customRangeTop: 'note-start' | 'cursor';
+  customRangeBottom: 'cursor' | 'note-end';
 }
 
 /** Whatever owns the settings and can persist them. */

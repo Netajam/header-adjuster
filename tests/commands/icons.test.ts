@@ -25,7 +25,12 @@ function registeredCommands(): RegisteredCommand[] {
     addRibbonIcon: () => null,
     addCommand: (command: RegisteredCommand) => commands.push(command),
   };
-  const context = { app: {}, defaultLevel: () => 1, conversion: () => ({}) };
+  const context = {
+    app: {},
+    defaultLevel: () => 1,
+    conversion: () => ({}),
+    customRange: () => ({ top: 'note-start', bottom: 'note-end' }),
+  };
 
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   registerCommandSurfaces(plugin as any, context as any);
@@ -37,7 +42,7 @@ describe('every action carries a symbol', () => {
   const commands = registeredCommands();
 
   test('there is a command for each scope in each direction, plus the placements', () => {
-    assert.equal(commands.length, 12);
+    assert.equal(commands.length, 14);
   });
 
   for (const command of commands) {

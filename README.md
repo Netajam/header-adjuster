@@ -2,13 +2,14 @@
 
 ## Overview
 
-The Heading Adjuster Plugin for Obsidian allows users to easily adjust the levels of headings in their Markdown documents. Users can increase or decrease heading levels by a specified number of levels, across the entire document, a selection, a specified range of lines, or just the line the cursor is on. The plugin also provides convenient default settings for heading adjustments.
+The Heading Adjuster Plugin for Obsidian allows users to easily adjust the levels of headings in their Markdown documents. Users can increase or decrease heading levels by a specified number of levels, across the entire document, a selection, a specified range of lines, a range pinned to the cursor, or just the line the cursor is on. The plugin also provides convenient default settings for heading adjustments.
 
 ## Features
 
 - Increase heading levels by a specified number.
 - Decrease heading levels by a specified number.
 - Adjust headings within a specified range of lines, or across the selection.
+- Adjust everything after the cursor, or everything before it, on one hotkey.
 - Adjust just the line the cursor is on, including turning a plain line into a
   heading and back again.
 - Make the current line a sibling or a child of the heading above it, or remove
@@ -45,6 +46,11 @@ say.
   asking how many levels to shift by, and optionally over which line range.
 - **Increase heading level by N (entire document)** / **Decrease heading level by
   N (entire document)**: Shifts every heading in the note by the default.
+- **Increase heading level by N (custom range)** / **Decrease heading level by N
+  (custom range)**: Shifts the headings between two boundaries you set once in
+  the settings, with no dialog and nothing selected. This is how you shift
+  everything after the cursor, or everything before it, on a single hotkey. See
+  [The custom range](#the-custom-range) below.
 - **Increase heading level in selection by N** / **Decrease heading level in
   selection by N**: Shifts only the headings inside the current selection.
   Available when something is selected.
@@ -68,6 +74,7 @@ Clicking the ribbon icon opens a menu with options to:
 - Increase or decrease by a number you type, over an optional line range.
 - Increase or decrease the whole document by one level.
 - Increase or decrease the selection by your default.
+- Increase or decrease your custom range by your default.
 - Increase or decrease the current line by your default.
 - Remove the current line's heading, or place it as a sibling or child of the
   heading above.
@@ -82,13 +89,14 @@ command this plugin registers carries its own symbol and no two are alike:
 | Solid arrow      | the dialog — you say how far |
 | Page with +/−    | the whole note               |
 | Box with +/−     | the selection                |
+| Ringed chevron   | your custom range            |
 | Bare chevron     | the current line             |
 | A struck through | remove the heading           |
 | Equals sign      | sibling of the heading above |
 | Arrow turning in | child of the heading above   |
 
 Up increases and down decreases throughout, so there are two things to learn
-rather than twelve.
+rather than fourteen.
 
 If you only have one slot, spend it on the hash: "Toggle heading on current
 line" both makes a section and unmakes it.
@@ -198,15 +206,57 @@ definition of a list item across every command. Removing a heading never writes
 a bullet back, either — Markdown records no provenance for the marker it
 replaced, so there is nothing to restore.
 
+### The custom range
+
+The five other scopes each name their range in their own command name, which is
+what makes them safe to bind: the hotkey does what the palette said it would.
+The custom range is the one whose boundaries you choose, and it is there for the
+range you want that the plugin does not ship — most often *everything after the
+cursor*, when a note has been pasted into the middle of another and needs
+pushing a level deeper.
+
+Two settings pick its boundaries — a top and a bottom, each naming the place it
+sits on:
+
+| Top             | Bottom          | The range                         |
+| --------------- | --------------- | --------------------------------- |
+| Top of the note | End of the note | the whole note *(default)*        |
+| **Cursor line** | End of the note | the cursor line to the end        |
+| Top of the note | **Cursor line** | the top of the note to the cursor |
+| **Cursor line** | **Cursor line** | the cursor line alone             |
+
+The top offers only the start of the note or the cursor, and the bottom only the
+cursor or the end, so there is no way to set a range that runs backwards.
+
+The cursor's own line is always inside the range. Standing on `## Section` with
+the top set to the cursor line and shifting down moves that heading too, along
+with everything under it.
+
+Both boundaries default to the note's own edges, so before you touch them the
+custom commands are a second copy of the document commands rather than a
+surprise. A boundary changed mid-session takes effect immediately — there is no
+reload.
+
+Line numbers are deliberately not offered here. A range baked into a hotkey
+outlives the note it was set for; for a one-off range, use **Increase heading
+level...** and type it.
+
 ### Settings
 
-Access the plugin settings from the Obsidian Settings under the "Heading Adjuster" section:
+Access the plugin settings from the Obsidian Settings under the "Heading
+Adjuster" section. They are grouped by the commands they govern — **Default
+shift**, **Custom range**, **Toggle heading on current line**, and **Bullet
+conversion**:
 
 - **Default increase level**: The default number of levels to increase headings by.
 - **Default decrease level**: The default number of levels to decrease headings by.
 - **Toggle puts the heading at**: Which level "Toggle heading on current line"
   writes, and so which level it takes back off — the top level (`#`), the same
   level as the heading above, or one below it. Defaults to the same level.
+- **Custom range: top**: Where the two "custom range" commands start — the top
+  of the note, or the cursor line. See [The custom range](#the-custom-range).
+- **Custom range: bottom**: Where the same two commands stop — the cursor line,
+  or the end of the note.
 - **Deepest heading level**: The level headings stop at. Anything an increase
   would push past it becomes a bulleted list item instead, and a bullet
   converted back returns to this level. Only has an effect with a conversion
@@ -218,6 +268,9 @@ Access the plugin settings from the Obsidian Settings under the "Heading Adjuste
 - **Convert bullets back into headings**: When decreasing, turn list items back
   into headings. This cannot tell a bullet the plugin created from one you typed
   yourself, so every list in range is converted — hand-written ones included.
+  An item takes one decrease per level of nesting to reach a heading, so a
+  heading that overflowed several levels past the ceiling needs the same number
+  of decreases to come back.
 
 ### Example Usage
 

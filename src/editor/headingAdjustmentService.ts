@@ -7,6 +7,7 @@ import type {
   RejectionReason,
 } from '../contracts';
 import type { AdjustmentOutcome } from '../core/adjustHeadings';
+import type { LineRange } from './editorDocument';
 import { Notice } from 'obsidian';
 import { adjustHeadings, placeLineHeading } from '../core/adjustHeadings';
 import {
@@ -119,18 +120,37 @@ function applyOutcome(
 }
 
 /**
- * Adjusts only the headings inside the editor's current selection.
+ * Adjusts the headings inside a range the editor works out for itself.
  *
- * Working out which lines are selected is this layer's job, not the caller's —
- * which is why `selectedLineRange` never has to leave the folder.
+ * The two kinds of range a command can name without asking the user anything:
+ * whatever is selected, or a span pinned to the cursor at one or both ends.
+ * Working out which lines those are is this layer's job, not the caller's —
+ * which is why `selectedLineRange` and `cursorLine` never have to leave the
+ * folder.
+ *
+ * A cursor range cannot come out backwards: the top is either the start of the
+ * document or the cursor, the bottom either the cursor or the end, so the low
+ * end is never above the high one. That is why there is nothing to reject here.
  */
-export function adjustEditorSelection(
+export function adjustEditorRange(
   editor: Editor,
   operation: AdjustmentOperation,
   levels: number,
-  conversion: ConversionSettings
+  conversion: ConversionSettings,
+  scope: 'selection' | { top: 'note-start' | 'cursor'; bottom: 'cursor' | 'note-end' }
 ): void {
-  const range = selectedLineRange(editor);
+  let range: LineRange | null;
+
+  if (scope === 'selection') {
+    range = selectedLineRange(editor);
+  } else {
+    const line = cursorLine(editor);
+    range = {
+      fromLine: scope.top === 'cursor' ? line : 0,
+      toLine: scope.bottom === 'cursor' ? line : editor.lineCount() - 1,
+    };
+  }
+
   if (!range) {
     return;
   }

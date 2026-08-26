@@ -5,7 +5,7 @@ import {
   adjustActiveDocument,
   adjustActiveSelection,
   adjustCurrentLine,
-  adjustSelection,
+  adjustCustomRange,
   placeCurrentLine,
 } from '../../src/commands/adjustmentCommands';
 
@@ -37,15 +37,21 @@ function fakeEditor(lines: string[], selections: unknown[] = [], cursor = 0) {
 }
 
 /**
- * A plugin that answers the two questions a command is allowed to ask.
+ * A plugin that answers the questions a command is allowed to ask.
  *
  * `reports` chooses how the workspace hands the editor over: as the active
  * Markdown view, as the focus-tracked `activeEditor`, or not at all.
+ * `customRange` is where the two custom-range commands are pointed; the two note
+ * edges are the whole document, which is what a fresh install has.
  */
 function fakeContext(
   editor: ReturnType<typeof fakeEditor> | null,
   conversion: Record<string, unknown>,
-  reports: 'view' | 'focus' | 'neither' = 'view'
+  reports: 'view' | 'focus' | 'neither' = 'view',
+  customRange: { top: 'note-start' | 'cursor'; bottom: 'cursor' | 'note-end' } = {
+    top: 'note-start',
+    bottom: 'note-end',
+  }
 ) {
   return {
     app: {
@@ -57,6 +63,7 @@ function fakeContext(
     defaultLevel: () => 1,
     conversion: () => conversion,
     toggleTarget: () => 'sibling',
+    customRange: () => customRange,
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
   } as any;
 }
@@ -110,8 +117,7 @@ describe('a command passes the plugin its conversion', () => {
       bulletsToHeadings: false,
     });
 
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    adjustSelection(context, editor as any, 'increase');
+    adjustActiveSelection(context, 'increase');
 
     assert.equal(written(editor, before), '###### A\n- B');
   });
@@ -289,5 +295,82 @@ describe('the toggle command needs only the one binding', () => {
     placeCurrentLine(context, 'toggle');
 
     assert.equal(written(editor, before), '## Setup\n### some prose');
+  });
+});
+
+describe('the custom-range commands', () => {
+  const NONE = { headingsToBullets: false, bulletsToHeadings: false };
+  const NOTE = ['# A', '# B', '# C'];
+
+  test('the boundaries come from the plugin, not from the command', () => {
+    const editor = fakeEditor([...NOTE], [], 1);
+    const context = fakeContext(editor, NONE, 'view', {
+      top: 'cursor',
+      bottom: 'note-end',
+    });
+
+    adjustCustomRange(context, 'increase');
+
+    assert.equal(written(editor, NOTE), '# A\n## B\n## C');
+  });
+
+  test('pointed the other way, the same command covers the other side', () => {
+    const editor = fakeEditor([...NOTE], [], 1);
+    const context = fakeContext(editor, NONE, 'view', {
+      top: 'note-start',
+      bottom: 'cursor',
+    });
+
+    adjustCustomRange(context, 'increase');
+
+    assert.equal(written(editor, NOTE), '## A\n## B\n# C');
+  });
+
+  test('unconfigured, it is the whole document — what a fresh install has', () => {
+    const editor = fakeEditor([...NOTE], [], 1);
+
+    adjustCustomRange(fakeContext(editor, NONE), 'increase');
+
+    assert.equal(written(editor, NOTE), '## A\n## B\n## C');
+  });
+
+  test('it decreases as well as increases', () => {
+    const before = ['## A', '## B'];
+    const editor = fakeEditor([...before], [], 1);
+    const context = fakeContext(editor, NONE, 'view', {
+      top: 'cursor',
+      bottom: 'note-end',
+    });
+
+    adjustCustomRange(context, 'decrease');
+
+    assert.equal(written(editor, before), '## A\n# B');
+  });
+
+  /**
+   * The same gap `CommandContext` leaves everywhere else: a command that
+   * forgot to ask the plugin for the conversion would still compile.
+   */
+  test('the conversion is asked for and carried through', () => {
+    const before = ['# A', '###### B'];
+    const editor = fakeEditor([...before], [], 1);
+    const context = fakeContext(
+      editor,
+      { headingsToBullets: true, bulletsToHeadings: false },
+      'view',
+      { top: 'cursor', bottom: 'note-end' }
+    );
+
+    adjustCustomRange(context, 'increase');
+
+    assert.equal(written(editor, before), '# A\n- B');
+  });
+
+  test('with no editor open, nothing is written', () => {
+    const editor = fakeEditor([...NOTE], [], 1);
+
+    adjustCustomRange(fakeContext(editor, NONE, 'neither'), 'increase');
+
+    assert.deepEqual(editor.transactions, []);
   });
 });
