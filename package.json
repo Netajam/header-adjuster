@@ -1,6 +1,6 @@
 {
 	"name": "obsidian-heading-adjuster",
-	"version": "1.3.0",
+	"version": "1.3.1",
 	"description": "Obsidian plugin to increase or decrease Markdown heading levels across a whole note, a selection, a given line range, or just the current line.",
 	"main": "main.js",
 	"scripts": {
