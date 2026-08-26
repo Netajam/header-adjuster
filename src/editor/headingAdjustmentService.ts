@@ -2,6 +2,7 @@ import type { Editor } from 'obsidian';
 import type {
   AdjustmentOperation,
   ConversionSettings,
+  HeadingPlacement,
   LinePlacement,
   RejectionReason,
 } from '../contracts';
@@ -87,10 +88,14 @@ export function adjustEditorLine(
  * the level that follows from that is the same whichever level it is written at
  * now.
  */
-export function placeEditorLine(editor: Editor, placement: LinePlacement): void {
+export function placeEditorLine(
+  editor: Editor,
+  placement: LinePlacement,
+  target: HeadingPlacement
+): void {
   applyOutcome(
     editor,
-    placeLineHeading(readEditorLines(editor), cursorLine(editor), placement)
+    placeLineHeading(readEditorLines(editor), cursorLine(editor), placement, target)
   );
 }
 

@@ -56,6 +56,7 @@ function fakeContext(
     },
     defaultLevel: () => 1,
     conversion: () => conversion,
+    toggleTarget: () => 'sibling',
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
   } as any;
 }
@@ -242,5 +243,51 @@ describe('the placement commands find the editor the user is in', () => {
     assert.doesNotThrow(() =>
       placeCurrentLine(fakeContext(null, {}, 'neither'), 'plain')
     );
+  });
+});
+
+describe('the toggle command needs only the one binding', () => {
+  /** The document after toggling line 1, with the toggle pointed at `target`. */
+  function toggled(lines: string[], target: string): string {
+    const editor = fakeEditor([...lines], [], 1);
+    const context = fakeContext(editor, {});
+    context.toggleTarget = () => target;
+
+    placeCurrentLine(context, 'toggle');
+
+    return written(editor, lines);
+  }
+
+  test('the same command puts a heading on and takes it off again', () => {
+    assert.equal(toggled(['## Setup', 'some prose'], 'sibling'), '## Setup\n## some prose');
+    assert.equal(toggled(['## Setup', '## some prose'], 'sibling'), '## Setup\nsome prose');
+  });
+
+  test('it goes wherever the plugin says it is pointed', () => {
+    const before = ['## Setup', 'some prose'];
+
+    assert.equal(toggled(before, 'root'), '## Setup\n# some prose');
+    assert.equal(toggled(before, 'sibling'), '## Setup\n## some prose');
+    assert.equal(toggled(before, 'child'), '## Setup\n### some prose');
+  });
+
+  test('each target takes off only the level it puts on', () => {
+    const on = ['## Setup', '### some prose'];
+
+    assert.equal(toggled(on, 'child'), '## Setup\nsome prose');
+    assert.equal(toggled(on, 'sibling'), '## Setup\n## some prose');
+  });
+
+  test('the target is read at press time, not when the command was registered', () => {
+    const before = ['## Setup', 'some prose'];
+    const editor = fakeEditor([...before], [], 1);
+    const context = fakeContext(editor, {});
+    let target = 'sibling';
+    context.toggleTarget = () => target;
+
+    target = 'child';
+    placeCurrentLine(context, 'toggle');
+
+    assert.equal(written(editor, before), '## Setup\n### some prose');
   });
 });

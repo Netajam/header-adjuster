@@ -47,6 +47,10 @@ it. There are three: **sibling**, **child**, and **plain**. A placement reads th
 **enclosing heading** and never reads how deep the line is written now, which is
 what separates it from an **increase** or a **decrease**.
 
+**Root**:
+A placement putting the line at `#`, the top of the note, answering to nothing
+above it. Reachable only by pointing a **toggle** at it.
+
 **Sibling**:
 A placement putting the line at the **enclosing heading**'s own level, so the two
 become siblings in the outline.
@@ -58,6 +62,17 @@ it becomes the first heading inside that section.
 **Plain**:
 A placement putting the line at **level zero** — no heading at all. This is how
 a heading is taken off outright, whatever level it was written at.
+
+**Toggle target**:
+Which of **root**, **sibling** or **child** a **toggle** is pointed at. The user
+sets it; it ships as **sibling**.
+
+**Toggle**:
+A placement that is its **toggle target** unless the line is already sitting
+there, in which case it is **plain**. The only placement that reads the level
+the line is written at, and the only one that is two answers wearing one name —
+which is what lets a user who has one key or one toolbar slot both make a
+section and unmake it.
 
 **Heading ceiling**:
 The deepest level a heading may occupy before it converts, which the user sets.
@@ -103,6 +118,11 @@ out. Only **decrease** does this, and only when explicitly enabled.
   distance reads the level the line is written at
 - **Sibling** and **child** both land on `#` when there is no **enclosing
   heading**, because the note they sit in is **level zero**
+- A **toggle** pressed twice returns the line it started from. A heading at any
+  other level is levelled to the **toggle target** first rather than removed, so
+  the second press is what takes it off
+- A **toggle** takes off only the level it puts on: pointed at **child**, it
+  leaves a **sibling** heading standing and moves it instead
 - A line's **list marker** and its **heading level** are the same slot: writing
   a heading onto a list item replaces the marker rather than following it, since
   a line cannot be a bullet and a heading at once

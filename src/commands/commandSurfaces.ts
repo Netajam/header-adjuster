@@ -42,6 +42,7 @@ const OPERATIONS: AdjustmentOperation[] = ['increase', 'decrease'];
  * because the group it sits in already said so.
  */
 const PLACEMENTS: Array<[LinePlacement, string, string]> = [
+  ['toggle', 'Toggle heading on current line', 'Toggle heading'],
   ['plain', 'Remove heading from current line', 'Remove heading'],
   [
     'sibling',

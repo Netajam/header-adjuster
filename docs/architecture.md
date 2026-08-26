@@ -48,7 +48,8 @@ main.ts                              root
 │           └── ui/levelInputForm.ts
 │               └── ui/submissionValidation.ts
 └── settings/settings.ts             door
-    └── settings/settingsTab.ts
+    └── settings/settingsTab.ts      how Obsidian is handed them
+        └── settings/controls.ts     what the settings are
 
 contracts.ts                         shared vocabulary — outside the tree
 ```
@@ -171,6 +172,12 @@ than leaving each caller to work them out.
   an effect: one undoable transaction and one `Notice`.
 - **`settings/`** is the policy — defaults, how a stored value is read back,
   how a default is chosen — with the dialog that edits it behind the door.
+  `controls.ts` is the list of settings there are; `settingsTab.ts` is the two
+  ways Obsidian gets them, described from 1.13 and drawn by hand before that.
+  Both paths read the one list, so neither can describe a setting the other
+  does not have. A stored value is whatever the file held, so a control that
+  admits only some strings — the toggle target does — checks the value against
+  the very options the user chose from rather than a second list of its own.
 - **`commands/`** owns how an action is offered, which on mobile means its
   symbol as much as its name: the toolbar there shows the icon and nothing
   else, so two actions wearing one glyph are two actions a user cannot tell

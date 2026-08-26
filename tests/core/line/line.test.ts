@@ -1,6 +1,7 @@
 import { describe, test } from 'node:test';
 import { strict as assert } from 'node:assert';
 
+import type { LinePlacement } from '../../../src/contracts';
 import { adjustLineLevel, placeLineLevel } from '../../../src/core/line/line';
 
 /**
@@ -115,11 +116,11 @@ describe('writing a line at the level its placement asks for', () => {
   /** The line as `placeLineLevel` would leave it, under a heading of `enclosing`. */
   function placed(
     line: string,
-    placement: 'plain' | 'sibling' | 'child',
+    placement: LinePlacement,
     enclosing = 0
   ): string {
     const above = enclosing > 0 ? [{ level: enclosing }] : [];
-    const [edit] = placeLineLevel([line], [], 0, placement, above);
+    const [edit] = placeLineLevel([line], [], 0, placement, above, 'sibling');
 
     return edit
       ? line.slice(0, edit.fromColumn) + edit.text + line.slice(edit.toColumn)
@@ -145,12 +146,12 @@ describe('writing a line at the level its placement asks for', () => {
   });
 
   test('a line already where the placement wants it is nothing to write', () => {
-    assert.deepEqual(placeLineLevel(['## A'], [], 0, 'sibling', [{ level: 2 }]), []);
-    assert.deepEqual(placeLineLevel(['A'], [], 0, 'plain', []), []);
+    assert.deepEqual(placeLineLevel(['## A'], [], 0, 'sibling', [{ level: 2 }], 'sibling'), []);
+    assert.deepEqual(placeLineLevel(['A'], [], 0, 'plain', [], 'sibling'), []);
   });
 
   test('a line the document reads as code is left alone', () => {
-    assert.deepEqual(placeLineLevel(['# A'], [true], 0, 'child', [{ level: 2 }]), []);
+    assert.deepEqual(placeLineLevel(['# A'], [true], 0, 'child', [{ level: 2 }], 'sibling'), []);
   });
 });
 
@@ -179,5 +180,48 @@ describe('writing a heading onto a line that is already a bullet', () => {
 
   test('a heading taken back off does not become a bullet again', () => {
     assert.equal(moved('# Some prose', 'decrease'), 'Some prose');
+  });
+});
+
+describe('toggling a heading on and off the current line', () => {
+  /** The line as a toggle would leave it, under a heading of `enclosing`. */
+  function toggled(line: string, enclosing = 0): string {
+    const above = enclosing > 0 ? [{ level: enclosing }] : [];
+    const [edit] = placeLineLevel([line], [], 0, 'toggle', above, 'sibling');
+
+    return edit
+      ? line.slice(0, edit.fromColumn) + edit.text + line.slice(edit.toColumn)
+      : line;
+  }
+
+  test('writes a heading onto a plain line at the enclosing level', () => {
+    assert.equal(toggled('Some prose', 2), '## Some prose');
+  });
+
+  test('takes it back off when the line is already sitting there', () => {
+    assert.equal(toggled('## Some prose', 2), 'Some prose');
+  });
+
+  test('one press then another returns the line it started from', () => {
+    assert.equal(toggled(toggled('Some prose', 3), 3), 'Some prose');
+    assert.equal(toggled(toggled('### Some prose', 3), 3), '### Some prose');
+  });
+
+  test('a heading at some other level is levelled first, not removed', () => {
+    assert.equal(toggled('##### Some prose', 2), '## Some prose');
+    assert.equal(toggled('# Some prose', 3), '### Some prose');
+  });
+
+  test('with nothing above, it is an H1 that goes on and off', () => {
+    assert.equal(toggled('Some prose'), '# Some prose');
+    assert.equal(toggled('# Some prose'), 'Some prose');
+  });
+
+  test('takes a bullet away on the way in, like the other placements', () => {
+    assert.equal(toggled('- Some prose', 2), '## Some prose');
+  });
+
+  test('a line the document reads as code is left alone', () => {
+    assert.deepEqual(placeLineLevel(['# A'], [true], 0, 'toggle', [], 'sibling'), []);
   });
 });

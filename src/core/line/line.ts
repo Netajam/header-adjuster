@@ -1,4 +1,8 @@
-import type { AdjustmentOperation, LinePlacement } from '../../contracts';
+import type {
+  AdjustmentOperation,
+  HeadingPlacement,
+  LinePlacement,
+} from '../../contracts';
 import type { LeveledLine } from './placement';
 import { enclosingLevel, placedLevel } from './placement';
 import { listMarkerWidth } from './marker';
@@ -67,21 +71,27 @@ export function adjustLineLevel(
  * when it is already there.
  *
  * The counterpart to shifting. A placement names a level outright, worked out
- * from the outline rather than from the line, so what the line is written at
- * now is read only to know what has to be replaced.
+ * from the outline rather than from the line — except `toggle`, which asks the
+ * line whether it is already there, and is why the level goes to `placedLevel`
+ * rather than being settled before `writeLine` is called.
  *
  * @param above The headings preceding the line, nearest last. The last of them
  *   is the enclosing heading, and the whole of what a placement reads.
+ * @param target Where a toggle is pointed, which the user chooses. Ignored by
+ *   every other placement.
  */
 export function placeLineLevel(
   lines: readonly string[],
   fenced: readonly boolean[],
   lineNumber: number,
   placement: LinePlacement,
-  above: readonly LeveledLine[]
+  above: readonly LeveledLine[],
+  target: HeadingPlacement
 ): LineLevelEdit[] {
-  const target = placedLevel(placement, enclosingLevel(above));
-  return writeLine(lines, fenced, lineNumber, () => target);
+  const enclosing = enclosingLevel(above);
+  return writeLine(lines, fenced, lineNumber, (level) =>
+    placedLevel(placement, enclosing, level, target)
+  );
 }
 
 /**

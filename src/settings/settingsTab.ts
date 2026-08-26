@@ -1,78 +1,16 @@
-import type {
-  App,
-  Plugin,
-  SettingDefinitionItem,
-  SettingSliderControl,
-  SettingToggleControl,
-} from 'obsidian';
-import type { SettingsHost } from '../contracts';
+import type { App, Plugin, SettingDefinitionItem } from 'obsidian';
+import type { HeadingPlacement, SettingsHost } from '../contracts';
+import type { ControlDefinition } from './controls';
 import { PluginSettingTab, Setting } from 'obsidian';
+import { SETTINGS, TOGGLE_TARGETS } from './controls';
 
 /**
- * How far each slider may travel: a default shift of one to five levels, and a
- * ceiling anywhere in Markdown's own range, six being that range's end and so
- * the setting having no effect.
- */
-const RANGE = {
-  level: { min: 1, max: 5, step: 1 },
-  ceiling: { min: 1, max: 6, step: 1 },
-} as const;
-
-/** The settings a slider can be bound to. */
-type LevelKey = 'increaseLevel' | 'decreaseLevel' | 'deepestHeadingLevel';
-
-/** The settings a toggle can be bound to. */
-type ToggleKey = 'headingsToBullets' | 'bulletsToHeadings';
-
-/**
- * One setting, described rather than drawn.
+ * How Obsidian is handed the settings — described where it can, drawn where it
+ * cannot.
  *
- * Narrower than Obsidian's own `SettingDefinitionItem`, which also covers
- * groups, pages and lists this plugin has no use for. Naming the two controls
- * it does use is what lets `display()` below read a key and get back the type
- * the setting actually holds.
+ * What the settings are lives in `controls.ts`; this file is only the two ways
+ * of putting them on screen and the reading and writing of one by key.
  */
-type ControlDefinition = {
-  name: string;
-  desc: string;
-  control: SettingSliderControl<LevelKey> | SettingToggleControl<ToggleKey>;
-};
-
-/** Every setting there is, said once. */
-const SETTINGS: ControlDefinition[] = [
-  {
-    name: 'Default increase level',
-    desc: 'The default number of levels to increase headings by.',
-    control: { type: 'slider', key: 'increaseLevel', ...RANGE.level },
-  },
-  {
-    name: 'Default decrease level',
-    desc: 'The default number of levels to decrease headings by.',
-    control: { type: 'slider', key: 'decreaseLevel', ...RANGE.level },
-  },
-  {
-    name: 'Deepest heading level',
-    desc: 'The level headings stop at. Anything an increase would push past it '
-      + 'becomes a bulleted list item instead, and a bullet converted back '
-      + 'returns to this level. Only has an effect with a conversion below '
-      + 'switched on.',
-    control: { type: 'slider', key: 'deepestHeadingLevel', ...RANGE.ceiling },
-  },
-  {
-    name: 'Convert headings past the deepest level into bullets',
-    desc: 'When increasing would push a heading past the level above, turn it into a '
-      + 'bulleted list item instead of leaving it unchanged. The content beneath '
-      + 'the heading is re-indented so it sits inside the new bullet.',
-    control: { type: 'toggle', key: 'headingsToBullets' },
-  },
-  {
-    name: 'Convert bullets back into headings',
-    desc: 'When decreasing, turn list items back into headings. Warning: this cannot '
-      + 'tell a bullet this plugin created from one you typed yourself, so every '
-      + 'list in range is converted — including hand-written ones.',
-    control: { type: 'toggle', key: 'bulletsToHeadings' },
-  },
-];
 
 export class HeadingAdjusterSettingTab extends PluginSettingTab {
   private readonly host: SettingsHost;
@@ -108,6 +46,8 @@ export class HeadingAdjusterSettingTab extends PluginSettingTab {
       settings[control.key] = value;
     } else if (control?.type === 'toggle' && typeof value === 'boolean') {
       settings[control.key] = value;
+    } else if (control?.type === 'dropdown' && isTarget(value)) {
+      settings[control.key] = value;
     } else {
       return Promise.resolve();
     }
@@ -128,25 +68,57 @@ export class HeadingAdjusterSettingTab extends PluginSettingTab {
     containerEl.empty();
 
     for (const { name, desc, control } of SETTINGS) {
-      const setting = new Setting(containerEl).setName(name).setDesc(desc);
-
-      if (control.type === 'slider') {
-        setting.addSlider((slider) =>
-          slider
-            .setLimits(control.min, control.max, control.step)
-            .setValue(this.host.settings[control.key])
-            .setDynamicTooltip()
-            .onChange((value) => void this.setControlValue(control.key, value))
-        );
-      } else {
-        setting.addToggle((toggle) =>
-          toggle
-            .setValue(this.host.settings[control.key])
-            .onChange((value) => void this.setControlValue(control.key, value))
-        );
-      }
+      this.draw(new Setting(containerEl).setName(name).setDesc(desc), control);
     }
   }
+
+  /**
+   * Puts one control on screen and wires it back to the setting it holds.
+   *
+   * Split out of `display()` because a control per kind, each a chain inside a
+   * callback inside a branch inside a loop, is nesting a reader has to unpick
+   * rather than read. `store` is shared: the three components hand back three
+   * different types and `setControlValue` is what decides which are real, so
+   * there is nothing per-kind to say here.
+   */
+  private draw(setting: Setting, control: ControlDefinition['control']): void {
+    const store = (value: unknown) => void this.setControlValue(control.key, value);
+
+    if (control.type === 'slider') {
+      setting.addSlider((slider) =>
+        slider
+          .setLimits(control.min, control.max, control.step)
+          .setValue(this.host.settings[control.key])
+          .setDynamicTooltip()
+          .onChange(store)
+      );
+      return;
+    }
+
+    if (control.type === 'dropdown') {
+      setting.addDropdown((dropdown) =>
+        dropdown
+          .addOptions(control.options)
+          .setValue(this.host.settings[control.key])
+          .onChange(store)
+      );
+      return;
+    }
+
+    setting.addToggle((toggle) =>
+      toggle.setValue(this.host.settings[control.key]).onChange(store)
+    );
+  }
+}
+
+/**
+ * Whether a value is one of the three places a toggle may be pointed.
+ *
+ * A stored setting is whatever the file held, so the dropdown's own options are
+ * what say which strings are real — the same list the user picked from.
+ */
+function isTarget(value: unknown): value is HeadingPlacement {
+  return typeof value === 'string' && value in TOGGLE_TARGETS;
 }
 
 /** The control bound to `key`, or nothing if this tab does not own it. */

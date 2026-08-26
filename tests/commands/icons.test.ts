@@ -37,7 +37,7 @@ describe('every action carries a symbol', () => {
   const commands = registeredCommands();
 
   test('there is a command for each scope in each direction, plus the placements', () => {
-    assert.equal(commands.length, 11);
+    assert.equal(commands.length, 12);
   });
 
   for (const command of commands) {

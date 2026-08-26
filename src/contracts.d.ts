@@ -15,15 +15,29 @@
 export type AdjustmentOperation = 'increase' | 'decrease';
 
 /**
+ * The three ways of naming a level for a line that is to be a heading.
+ *
+ * `root` is the top of the note and answers to nothing above it. The other two
+ * are read against the enclosing heading, the nearest heading above the line:
+ * `sibling` takes its level, `child` one deeper. These are also the three a
+ * toggle can be pointed at, which is why they are a word of their own.
+ */
+export type HeadingPlacement = 'root' | 'sibling' | 'child';
+
+/**
  * Where the current line's heading sits relative to the section it is in.
  *
  * These name a level outright instead of a distance to move, which is what
- * separates them from an operation: nothing about them reads how deep the line
- * is written now. `plain` is level zero — no heading at all — and is how one is
- * taken away. The other two are read against the enclosing heading, the nearest
- * heading above the line.
+ * separates them from an operation. `plain` is level zero — no heading at all —
+ * and is how one is taken away.
+ *
+ * `toggle` is the one that also reads the line: it is whichever
+ * `HeadingPlacement` the user pointed it at, unless the line is already sitting
+ * there, in which case there is nothing left to add and it is `plain` instead.
+ * That makes one command out of two, which is what a mobile toolbar with a
+ * single free slot has room for.
  */
-export type LinePlacement = 'plain' | 'sibling' | 'child';
+export type LinePlacement = HeadingPlacement | 'plain' | 'toggle';
 
 /**
  * Why an adjustment produced nothing.
@@ -62,6 +76,8 @@ export interface HeadingAdjusterSettings extends ConversionSettings {
   increaseLevel: number;
   decreaseLevel: number;
   deepestHeadingLevel: number;
+  /** Which level the toggle puts a heading at, and so which one takes it off. */
+  toggleTarget: HeadingPlacement;
 }
 
 /** Whatever owns the settings and can persist them. */
