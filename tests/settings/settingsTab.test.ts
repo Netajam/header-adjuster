@@ -34,14 +34,23 @@ function tabFor(settings: HeadingAdjusterSettings) {
 }
 
 /**
- * The control on each definition.
+ * Every definition inside the groups the tab returns.
  *
- * Obsidian's return type also covers definitions that carry no control at all —
- * groups, pages, actions — so this asserts its way down to the two kinds this
- * plugin actually returns before any test reads a key off one.
+ * The tab hands Obsidian a list of groups, so a control is always one level
+ * down. Obsidian's return type also covers pages and lists this plugin does not
+ * return, which is what the assertions on the way down are for.
  */
+function definitions(tab: HeadingAdjusterSettingTab) {
+  return tab.getSettingDefinitions().flatMap((group) => {
+    assert.ok('type' in group && group.type === 'group', 'the tab returns groups');
+    assert.ok('items' in group && group.items, 'a group carries its settings');
+    return group.items;
+  });
+}
+
+/** The control on each definition, asserted down to the kinds this plugin binds. */
 function controls(tab: HeadingAdjusterSettingTab) {
-  return tab.getSettingDefinitions().map((definition) => {
+  return definitions(tab).map((definition) => {
     const control = 'control' in definition ? definition.control : undefined;
     assert.ok(control, 'every definition binds a control');
     return control;
@@ -72,9 +81,34 @@ describe('getSettingDefinitions', () => {
   test('every definition carries the text the search indexes', async () => {
     const { tab } = tabFor(await defaults());
 
-    for (const definition of tab.getSettingDefinitions()) {
+    for (const definition of definitions(tab)) {
       assert.ok('name' in definition && definition.name, 'a definition needs a name');
       assert.ok('desc' in definition && definition.desc, 'a definition needs a description');
+    }
+  });
+
+  /**
+   * A setting whose effect a user cannot place is a setting they will not
+   * touch, so each group is named for the commands it governs.
+   */
+  test('the settings arrive grouped, and every group is named', async () => {
+    const { tab } = tabFor(await defaults());
+    const groups = tab.getSettingDefinitions();
+
+    assert.deepEqual(
+      groups.map((group) => ('heading' in group ? group.heading : undefined)),
+      ['Default shift', 'Custom range', 'Toggle heading on current line', 'Bullet conversion']
+    );
+  });
+
+  test('no group is left empty', async () => {
+    const { tab } = tabFor(await defaults());
+
+    for (const group of tab.getSettingDefinitions()) {
+      assert.ok(
+        'items' in group && group.items && group.items.length > 0,
+        'an empty group is a heading with nothing under it'
+      );
     }
   });
 });
@@ -185,5 +219,79 @@ describe('the toggle target dropdown', () => {
         `${control.key} is a ${control.type}, which display() would draw as a toggle`
       );
     }
+  });
+});
+
+describe('the custom range boundaries', () => {
+  /**
+   * The two ends take different options on purpose: nothing above the top or
+   * below the bottom is offered, which is what makes a backwards range
+   * unconfigurable rather than merely unlikely.
+   */
+  test('the top offers the start of the note and the cursor, and nothing else', async () => {
+    const { tab } = tabFor(await defaults());
+    const control = controls(tab).find((each) => each.key === 'customRangeTop');
+
+    assert.ok(control && control.type === 'dropdown');
+    assert.deepEqual(Object.keys(control.options), ['note-start', 'cursor']);
+  });
+
+  test('the bottom offers the cursor and the end of the note, and nothing else', async () => {
+    const { tab } = tabFor(await defaults());
+    const control = controls(tab).find((each) => each.key === 'customRangeBottom');
+
+    assert.ok(control && control.type === 'dropdown');
+    assert.deepEqual(Object.keys(control.options), ['cursor', 'note-end']);
+  });
+
+  test('a fresh install has the whole note', async () => {
+    const settings = await defaults();
+
+    assert.equal(settings.customRangeTop, 'note-start');
+    assert.equal(settings.customRangeBottom, 'note-end');
+  });
+
+  test('a chosen boundary is stored and persisted', async () => {
+    const settings = await defaults();
+    const { tab, saves } = tabFor(settings);
+
+    await tab.setControlValue('customRangeTop', 'cursor');
+
+    assert.equal(settings.customRangeTop, 'cursor');
+    assert.equal(saves.length, 1);
+  });
+
+  /**
+   * Each dropdown is validated against its own options rather than against all
+   * of them, so the bottom's values are not writable to the top.
+   */
+  test('a boundary the other end offers is refused, not stored', async () => {
+    const settings = await defaults();
+    const { tab, saves } = tabFor(settings);
+
+    await tab.setControlValue('customRangeTop', 'note-end');
+
+    assert.equal(settings.customRangeTop, 'note-start');
+    assert.deepEqual(saves, [], 'nothing was written, so nothing is persisted');
+  });
+
+  test('a string that is no boundary at all is refused too', async () => {
+    const settings = await defaults();
+    const { tab, saves } = tabFor(settings);
+
+    await tab.setControlValue('customRangeBottom', 'halfway');
+
+    assert.equal(settings.customRangeBottom, 'note-end');
+    assert.deepEqual(saves, []);
+  });
+
+  test('a value of the wrong type entirely is refused as well', async () => {
+    const settings = await defaults();
+    const { tab, saves } = tabFor(settings);
+
+    await tab.setControlValue('customRangeTop', 3);
+
+    assert.equal(settings.customRangeTop, 'note-start');
+    assert.deepEqual(saves, []);
   });
 });

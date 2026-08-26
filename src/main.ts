@@ -51,11 +51,11 @@ export default class HeadingAdjusterPlugin extends Plugin implements SettingsHos
     return this.settings.toggleTarget;
   }
 
-  /** Which ends of the custom range are pinned to the cursor. The fourth. */
-  customRange(): { startsAtCursor: boolean; endsAtCursor: boolean } {
+  /** The two boundaries of the custom range. The fourth thing a command asks. */
+  customRange(): { top: 'note-start' | 'cursor'; bottom: 'cursor' | 'note-end' } {
     return {
-      startsAtCursor: this.settings.customRangeStartsAtCursor,
-      endsAtCursor: this.settings.customRangeEndsAtCursor,
+      top: this.settings.customRangeTop,
+      bottom: this.settings.customRangeBottom,
     };
   }
 }

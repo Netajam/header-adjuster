@@ -298,7 +298,7 @@ describe('the caret after writing a heading onto the current line', () => {
 
 describe('a range pinned to the cursor', () => {
   /**
-   * The four ranges the two booleans spell out. The cursor sits on line 2 of
+   * The four ranges the two boundaries spell out. The cursor sits on line 2 of
    * four headings throughout, so every boundary lands somewhere visible: a
    * range that ignored one end would take in a heading the assertion names.
    */
@@ -306,63 +306,57 @@ describe('a range pinned to the cursor', () => {
   const NONE = { headingsToBullets: false, bulletsToHeadings: false };
 
   function shifted(
-    startsAtCursor: boolean,
-    endsAtCursor: boolean,
+    top: 'note-start' | 'cursor',
+    bottom: 'cursor' | 'note-end',
     cursor = 2
   ): string {
     const editor = fakeEditor([...NOTE], cursor);
 
-    adjustEditorRange(asEditor(editor), 'increase', 1, NONE, {
-      startsAtCursor,
-      endsAtCursor,
-    });
+    adjustEditorRange(asEditor(editor), 'increase', 1, NONE, { top, bottom });
 
     return written(editor, NOTE);
   }
 
-  test('starting at the cursor runs on to the end of the note', () => {
-    assert.equal(shifted(true, false), '# A\n# B\n## C\n## D');
+  test('a top of the cursor runs on to the end of the note', () => {
+    assert.equal(shifted('cursor', 'note-end'), '# A\n# B\n## C\n## D');
   });
 
-  test('ending at the cursor runs back to the top of the note', () => {
-    assert.equal(shifted(false, true), '## A\n## B\n## C\n# D');
+  test('a bottom of the cursor runs back to the top of the note', () => {
+    assert.equal(shifted('note-start', 'cursor'), '## A\n## B\n## C\n# D');
   });
 
-  test('neither end pinned is the whole document', () => {
-    assert.equal(shifted(false, false), '## A\n## B\n## C\n## D');
+  test('the two note edges are the whole document', () => {
+    assert.equal(shifted('note-start', 'note-end'), '## A\n## B\n## C\n## D');
   });
 
-  test('both ends pinned is the cursor line alone', () => {
-    assert.equal(shifted(true, true), '# A\n# B\n## C\n# D');
+  test('the cursor at both ends is the cursor line alone', () => {
+    assert.equal(shifted('cursor', 'cursor'), '# A\n# B\n## C\n# D');
   });
 
   test('the cursor on the first line still reaches the end', () => {
-    assert.equal(shifted(true, false, 0), '## A\n## B\n## C\n## D');
+    assert.equal(shifted('cursor', 'note-end', 0), '## A\n## B\n## C\n## D');
   });
 
   test('the cursor on the last line still reaches the top', () => {
-    assert.equal(shifted(false, true, 3), '## A\n## B\n## C\n## D');
+    assert.equal(shifted('note-start', 'cursor', 3), '## A\n## B\n## C\n## D');
   });
 
   /**
-   * The reason `adjustEditorRange` has nothing to reject: an end left off the
-   * cursor is the edge of the document on that side, so whichever line the
-   * cursor is on, the low end is never above the high one.
+   * The reason `adjustEditorRange` has nothing to reject, and the reason the
+   * two ends are offered different options: whichever line the cursor is on,
+   * the top never lands below the bottom.
    */
-  test('no combination of boundaries can produce a backwards range', () => {
+  test('no pair of boundaries can produce a backwards range', () => {
     for (const cursor of [0, 1, 2, 3]) {
-      for (const starts of [true, false]) {
-        for (const ends of [true, false]) {
+      for (const top of ['note-start', 'cursor'] as const) {
+        for (const bottom of ['cursor', 'note-end'] as const) {
           const editor = fakeEditor([...NOTE], cursor);
 
-          adjustEditorRange(asEditor(editor), 'increase', 1, NONE, {
-            startsAtCursor: starts,
-            endsAtCursor: ends,
-          });
+          adjustEditorRange(asEditor(editor), 'increase', 1, NONE, { top, bottom });
 
           assert.ok(
             editor.transactions.length > 0,
-            `cursor ${cursor}, starts ${starts}, ends ${ends} wrote nothing`
+            `cursor ${cursor}, top ${top}, bottom ${bottom} wrote nothing`
           );
         }
       }
@@ -376,7 +370,7 @@ describe('a range pinned to the cursor', () => {
     adjustEditorRange(asEditor(editor), 'increase', 1, {
       headingsToBullets: true,
       bulletsToHeadings: false,
-    }, { startsAtCursor: false, endsAtCursor: true });
+    }, { top: 'note-start', bottom: 'cursor' });
 
     assert.equal(written(editor, before), '- A\nbody\n# B');
   });

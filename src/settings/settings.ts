@@ -26,10 +26,10 @@ const DEFAULT_SETTINGS: HeadingAdjusterSettings = {
   // What the toggle did before it could be pointed anywhere else, so an
   // upgrade finds the command behaving exactly as it left it.
   toggleTarget: 'sibling',
-  // Both off is the whole document, so the custom commands start out as a
-  // second copy of the document commands rather than as something surprising.
-  customRangeStartsAtCursor: false,
-  customRangeEndsAtCursor: false,
+  // The whole note, so the custom commands start out as a second copy of the
+  // document commands rather than as something surprising.
+  customRangeTop: 'note-start',
+  customRangeBottom: 'note-end',
 };
 
 /** The stored settings, with anything missing filled in from the defaults. */

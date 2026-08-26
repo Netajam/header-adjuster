@@ -1,15 +1,17 @@
 import type { App, Plugin, SettingDefinitionItem } from 'obsidian';
-import type { HeadingPlacement, SettingsHost } from '../contracts';
+import type { HeadingAdjusterSettings, SettingsHost } from '../contracts';
 import type { ControlDefinition } from './controls';
 import { PluginSettingTab, Setting } from 'obsidian';
-import { SETTINGS, TOGGLE_TARGETS } from './controls';
+import { OPTIONS, SETTINGS } from './controls';
 
 /**
  * How Obsidian is handed the settings — described where it can, drawn where it
  * cannot.
  *
  * What the settings are lives in `controls.ts`; this file is only the two ways
- * of putting them on screen and the reading and writing of one by key.
+ * of putting them on screen and the reading and writing of one by key. Both
+ * ways read the same grouped list, so the headings a user sees are the same
+ * either side of Obsidian 1.13.
  */
 
 export class HeadingAdjusterSettingTab extends PluginSettingTab {
@@ -28,7 +30,11 @@ export class HeadingAdjusterSettingTab extends PluginSettingTab {
    * itself cannot be searched, because nothing outside it knows what it holds.
    */
   getSettingDefinitions(): SettingDefinitionItem[] {
-    return SETTINGS;
+    return SETTINGS.map((section) => ({
+      type: 'group',
+      heading: section.heading,
+      items: section.items,
+    }));
   }
 
   /** Reads one setting for the definition bound to `key`. */
@@ -46,8 +52,10 @@ export class HeadingAdjusterSettingTab extends PluginSettingTab {
       settings[control.key] = value;
     } else if (control?.type === 'toggle' && typeof value === 'boolean') {
       settings[control.key] = value;
-    } else if (control?.type === 'dropdown' && isTarget(value)) {
-      settings[control.key] = value;
+    } else if (control?.type === 'dropdown' && typeof value === 'string') {
+      return storeOption(settings, control.key, value)
+        ? this.host.saveSettings()
+        : Promise.resolve();
     } else {
       return Promise.resolve();
     }
@@ -67,8 +75,12 @@ export class HeadingAdjusterSettingTab extends PluginSettingTab {
     const { containerEl } = this;
     containerEl.empty();
 
-    for (const { name, desc, control } of SETTINGS) {
-      this.draw(new Setting(containerEl).setName(name).setDesc(desc), control);
+    for (const section of SETTINGS) {
+      new Setting(containerEl).setName(section.heading).setHeading();
+
+      for (const { name, desc, control } of section.items) {
+        this.draw(new Setting(containerEl).setName(name).setDesc(desc), control);
+      }
     }
   }
 
@@ -112,16 +124,37 @@ export class HeadingAdjusterSettingTab extends PluginSettingTab {
 }
 
 /**
- * Whether a value is one of the three places a toggle may be pointed.
+ * Writes a dropdown's value, and says whether it was one this plugin offers.
  *
- * A stored setting is whatever the file held, so the dropdown's own options are
- * what say which strings are real — the same list the user picked from.
+ * A stored setting is whatever the file held, so each dropdown's own options are
+ * what say which strings are real — the same list the user picked from. The
+ * three are spelled out rather than looked up in a loop because each key holds a
+ * different union, and the cast beside each one is only reached once the `in`
+ * check on the same line has proved the value belongs to it.
  */
-function isTarget(value: unknown): value is HeadingPlacement {
-  return typeof value === 'string' && value in TOGGLE_TARGETS;
+function storeOption(
+  settings: HeadingAdjusterSettings,
+  key: keyof typeof OPTIONS,
+  value: string
+): boolean {
+  if (key === 'toggleTarget' && value in OPTIONS.toggleTarget) {
+    settings.toggleTarget = value as HeadingAdjusterSettings['toggleTarget'];
+    return true;
+  }
+  if (key === 'customRangeTop' && value in OPTIONS.customRangeTop) {
+    settings.customRangeTop = value as HeadingAdjusterSettings['customRangeTop'];
+    return true;
+  }
+  if (key === 'customRangeBottom' && value in OPTIONS.customRangeBottom) {
+    settings.customRangeBottom = value as HeadingAdjusterSettings['customRangeBottom'];
+    return true;
+  }
+  return false;
 }
 
 /** The control bound to `key`, or nothing if this tab does not own it. */
 function controlFor(key: string): ControlDefinition['control'] | undefined {
-  return SETTINGS.find((setting) => setting.control.key === key)?.control;
+  return SETTINGS.flatMap((section) => section.items).find(
+    (setting) => setting.control.key === key
+  )?.control;
 }

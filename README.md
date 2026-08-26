@@ -215,23 +215,27 @@ range you want that the plugin does not ship — most often *everything after th
 cursor*, when a note has been pasted into the middle of another and needs
 pushing a level deeper.
 
-Two settings say where it starts and where it stops. Each is either the cursor
-or the edge of the note:
+Two settings pick its boundaries — a top and a bottom, each naming the place it
+sits on:
 
-| Starts at cursor | Ends at cursor | The range                        |
-| ---------------- | -------------- | -------------------------------- |
-| off              | off            | the whole note                   |
-| **on**           | off            | the cursor line to the end       |
-| off              | **on**         | the top of the note to the cursor|
-| **on**           | **on**         | the cursor line alone            |
+| Top             | Bottom          | The range                         |
+| --------------- | --------------- | --------------------------------- |
+| Top of the note | End of the note | the whole note *(default)*        |
+| **Cursor line** | End of the note | the cursor line to the end        |
+| Top of the note | **Cursor line** | the top of the note to the cursor |
+| **Cursor line** | **Cursor line** | the cursor line alone             |
+
+The top offers only the start of the note or the cursor, and the bottom only the
+cursor or the end, so there is no way to set a range that runs backwards.
 
 The cursor's own line is always inside the range. Standing on `## Section` with
-"starts at cursor" on and shifting down moves that heading too, along with
-everything under it.
+the top set to the cursor line and shifting down moves that heading too, along
+with everything under it.
 
-Both settings ship off, so before you touch them the custom commands are a
-second copy of the document commands rather than a surprise. A boundary changed
-mid-session takes effect immediately — there is no reload.
+Both boundaries default to the note's own edges, so before you touch them the
+custom commands are a second copy of the document commands rather than a
+surprise. A boundary changed mid-session takes effect immediately — there is no
+reload.
 
 Line numbers are deliberately not offered here. A range baked into a hotkey
 outlives the note it was set for; for a one-off range, use **Increase heading
@@ -239,19 +243,20 @@ level...** and type it.
 
 ### Settings
 
-Access the plugin settings from the Obsidian Settings under the "Heading Adjuster" section:
+Access the plugin settings from the Obsidian Settings under the "Heading
+Adjuster" section. They are grouped by the commands they govern — **Default
+shift**, **Custom range**, **Toggle heading on current line**, and **Bullet
+conversion**:
 
 - **Default increase level**: The default number of levels to increase headings by.
 - **Default decrease level**: The default number of levels to decrease headings by.
 - **Toggle puts the heading at**: Which level "Toggle heading on current line"
   writes, and so which level it takes back off — the top level (`#`), the same
   level as the heading above, or one below it. Defaults to the same level.
-- **Custom range starts at the cursor**: Where the two "custom range" commands
-  begin. Off means the top of the note. See
-  [The custom range](#the-custom-range).
-- **Custom range ends at the cursor**: Where the two "custom range" commands
-  stop. Off means the end of the note. With the setting above off as well, the
-  custom commands cover the whole document.
+- **Custom range: top**: Where the two "custom range" commands start — the top
+  of the note, or the cursor line. See [The custom range](#the-custom-range).
+- **Custom range: bottom**: Where the same two commands stop — the cursor line,
+  or the end of the note.
 - **Deepest heading level**: The level headings stop at. Anything an increase
   would push past it becomes a bulleted list item instead, and a bullet
   converted back returns to this level. Only has an effect with a conversion

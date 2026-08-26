@@ -29,7 +29,7 @@ function registeredCommands(): RegisteredCommand[] {
     app: {},
     defaultLevel: () => 1,
     conversion: () => ({}),
-    customRange: () => ({ startsAtCursor: false, endsAtCursor: false }),
+    customRange: () => ({ top: 'note-start', bottom: 'note-end' }),
   };
 
   // eslint-disable-next-line @typescript-eslint/no-explicit-any

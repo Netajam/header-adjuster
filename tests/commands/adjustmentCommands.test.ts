@@ -41,14 +41,17 @@ function fakeEditor(lines: string[], selections: unknown[] = [], cursor = 0) {
  *
  * `reports` chooses how the workspace hands the editor over: as the active
  * Markdown view, as the focus-tracked `activeEditor`, or not at all.
- * `customRange` is where the two custom-range commands are pointed; both ends
- * off is the whole document, which is what a fresh install has.
+ * `customRange` is where the two custom-range commands are pointed; the two note
+ * edges are the whole document, which is what a fresh install has.
  */
 function fakeContext(
   editor: ReturnType<typeof fakeEditor> | null,
   conversion: Record<string, unknown>,
   reports: 'view' | 'focus' | 'neither' = 'view',
-  customRange = { startsAtCursor: false, endsAtCursor: false }
+  customRange: { top: 'note-start' | 'cursor'; bottom: 'cursor' | 'note-end' } = {
+    top: 'note-start',
+    bottom: 'note-end',
+  }
 ) {
   return {
     app: {
@@ -302,8 +305,8 @@ describe('the custom-range commands', () => {
   test('the boundaries come from the plugin, not from the command', () => {
     const editor = fakeEditor([...NOTE], [], 1);
     const context = fakeContext(editor, NONE, 'view', {
-      startsAtCursor: true,
-      endsAtCursor: false,
+      top: 'cursor',
+      bottom: 'note-end',
     });
 
     adjustCustomRange(context, 'increase');
@@ -314,8 +317,8 @@ describe('the custom-range commands', () => {
   test('pointed the other way, the same command covers the other side', () => {
     const editor = fakeEditor([...NOTE], [], 1);
     const context = fakeContext(editor, NONE, 'view', {
-      startsAtCursor: false,
-      endsAtCursor: true,
+      top: 'note-start',
+      bottom: 'cursor',
     });
 
     adjustCustomRange(context, 'increase');
@@ -335,8 +338,8 @@ describe('the custom-range commands', () => {
     const before = ['## A', '## B'];
     const editor = fakeEditor([...before], [], 1);
     const context = fakeContext(editor, NONE, 'view', {
-      startsAtCursor: true,
-      endsAtCursor: false,
+      top: 'cursor',
+      bottom: 'note-end',
     });
 
     adjustCustomRange(context, 'decrease');
@@ -355,7 +358,7 @@ describe('the custom-range commands', () => {
       editor,
       { headingsToBullets: true, bulletsToHeadings: false },
       'view',
-      { startsAtCursor: true, endsAtCursor: false }
+      { top: 'cursor', bottom: 'note-end' }
     );
 
     adjustCustomRange(context, 'increase');

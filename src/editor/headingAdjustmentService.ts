@@ -128,16 +128,16 @@ function applyOutcome(
  * which is why `selectedLineRange` and `cursorLine` never have to leave the
  * folder.
  *
- * A cursor range cannot come out backwards: an end left off the cursor is the
- * edge of the document on that side, so the low end is never above the high
- * one. That is why there is nothing to reject here.
+ * A cursor range cannot come out backwards: the top is either the start of the
+ * document or the cursor, the bottom either the cursor or the end, so the low
+ * end is never above the high one. That is why there is nothing to reject here.
  */
 export function adjustEditorRange(
   editor: Editor,
   operation: AdjustmentOperation,
   levels: number,
   conversion: ConversionSettings,
-  scope: 'selection' | { startsAtCursor: boolean; endsAtCursor: boolean }
+  scope: 'selection' | { top: 'note-start' | 'cursor'; bottom: 'cursor' | 'note-end' }
 ): void {
   let range: LineRange | null;
 
@@ -146,8 +146,8 @@ export function adjustEditorRange(
   } else {
     const line = cursorLine(editor);
     range = {
-      fromLine: scope.startsAtCursor ? line : 0,
-      toLine: scope.endsAtCursor ? line : editor.lineCount() - 1,
+      fromLine: scope.top === 'cursor' ? line : 0,
+      toLine: scope.bottom === 'cursor' ? line : editor.lineCount() - 1,
     };
   }
 

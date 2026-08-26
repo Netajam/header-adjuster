@@ -35,8 +35,8 @@ export interface CommandContext {
   conversion(): ConversionSettings;
   /** Where the toggle is pointed, for the same reason again. */
   toggleTarget(): HeadingPlacement;
-  /** Which ends of the custom range the user has pinned to the cursor. */
-  customRange(): { startsAtCursor: boolean; endsAtCursor: boolean };
+  /** The two boundaries the user set the custom range to. */
+  customRange(): { top: 'note-start' | 'cursor'; bottom: 'cursor' | 'note-end' };
 }
 
 /** Asks for a shift and a range, then adjusts what the user named. */

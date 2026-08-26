@@ -81,18 +81,23 @@ export interface HeadingAdjusterSettings extends ConversionSettings {
   /**
    * Where the custom commands start, and where they stop.
    *
-   * Two booleans rather than a pair of named boundaries, because between them
-   * they say everything a persistent range can usefully say: off is the edge of
-   * the note, on is the cursor. A fresh install has both off, which is the whole
-   * document — the same range the document commands already cover, so the
-   * custom pair does something sensible before it is configured.
+   * Each end names the boundary it sits on rather than answering a yes/no about
+   * the cursor: a toggle has to assert one state in its label and describe the
+   * other in its help text, which reads as a contradiction whichever way it is
+   * worded. `'cursor'` on both ends is the cursor line alone, and the pair
+   * defaults to the whole note — the same range the document commands cover, so
+   * the custom pair does something sensible before it is configured.
    *
-   * A fixed line number is deliberately not offered. A range baked into a hotkey
-   * outlives the note it was set for; the dialog is where a one-off range
+   * The two ends take different options on purpose. Nothing above the top or
+   * below the bottom is offered, so a backwards range cannot be configured and
+   * there is none to reject.
+   *
+   * A fixed line number is deliberately not offered either. A range baked into a
+   * hotkey outlives the note it was set for; the dialog is where a one-off range
    * belongs.
    */
-  customRangeStartsAtCursor: boolean;
-  customRangeEndsAtCursor: boolean;
+  customRangeTop: 'note-start' | 'cursor';
+  customRangeBottom: 'cursor' | 'note-end';
 }
 
 /** Whatever owns the settings and can persist them. */
