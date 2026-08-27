@@ -247,7 +247,10 @@ line back in a list, either on its own or carrying the section the heading held:
 | A list item, with the section nested under it | `- D` / `  - E` |
 
 The section ends where the heading's does — at the next heading, whatever its
-level.
+level. It moves as one block, so its own nesting is untouched, and it moves by
+one level in whatever the section already indents by: a tab-nested list gets a
+tab, a four-space one gets four spaces. A section with no nesting to go on
+takes the width of the marker instead.
 
 The round trip does not close on depth: a heading remembers nothing about how
 far the item it came from was indented, so an item lifted out of four levels of

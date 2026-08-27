@@ -334,8 +334,46 @@ describe('what a removed heading leaves behind', () => {
 
   test('a list item holding the section the heading held', () => {
     assert.deepEqual(removed(SECTIONED, SECTION), [
-      '- D', '  - E', '  \t- etc', '# Next', '- untouched',
+      '- D', '\t- E', '\t\t- etc', '# Next', '- untouched',
     ]);
+  });
+
+  /**
+   * The section moves as one block, and in the unit the document already uses.
+   * Padding a tab-indented list with spaces leaves `\t- child` written as
+   * `  \t- child` — two indent styles on one line, a child of its parent only
+   * because a tab happens to land on the column the parent's text starts at.
+   */
+  test('the block takes the indent the section already writes', () => {
+    const tabs = ['# D', '- E', '\t- F', '- G'];
+    const spaces = ['# D', '- E', '    - F', '- G'];
+
+    assert.deepEqual(removed(tabs, SECTION), ['- D', '\t- E', '\t\t- F', '\t- G']);
+    assert.deepEqual(removed(spaces, SECTION), ['- D', '    - E', '        - F', '    - G']);
+  });
+
+  test('the narrowest indent is the level, not the first one met', () => {
+    const lines = ['# D', '\t\t- deep first', '\t- one level'];
+
+    assert.deepEqual(removed(lines, SECTION), ['- D', '\t\t\t- deep first', '\t\t- one level']);
+  });
+
+  test('a flat section has no indent to learn from, so the marker sets it', () => {
+    assert.deepEqual(removed(['# D', '- E', 'body'], SECTION), ['- D', '  - E', '  body']);
+  });
+
+  test('every line moves by the same amount, so the section keeps its shape', () => {
+    const lines = ['# D', '- E', '\t- F', '\t\t- G', '- H'];
+    const before = lines.slice(1).map((line) => line.length - line.trimStart().length);
+    const after = removed(lines, SECTION).slice(1).map(
+      (line) => line.length - line.trimStart().length
+    );
+
+    assert.deepEqual(
+      after.map((width, index) => width - before[index]),
+      [1, 1, 1, 1],
+      'a uniform shift is what leaves the relative nesting untouched'
+    );
   });
 
   test('the section stops at the next heading, whatever its level', () => {

@@ -94,7 +94,17 @@ export function liftNestedEdits(
  * its level, or at the end of the note. A `#` inside a code fence is text and
  * does not end anything.
  *
- * @param width How far to indent — the width of the marker now opening the line.
+ * Every line takes the same prefix, which is what carries the section's own
+ * shape through unchanged — only its depth as a whole moves. What that prefix
+ * is matters as much as its width: padding a tab-indented list with spaces
+ * leaves `\t- child` written as `  \t- child`, two indent styles deep on one
+ * line, holding together only because a tab happens to land on the column the
+ * parent's text starts at. So the section is asked what a level looks like in
+ * this document and given one more of those, falling back to the marker's own
+ * width when it has no nesting to answer with.
+ *
+ * @param width How wide a level is when the section has no indent of its own —
+ *   the width of the marker now opening the line.
  */
 export function indentSectionEdits(
   lines: readonly string[],
@@ -102,20 +112,52 @@ export function indentSectionEdits(
   lineNumber: number,
   width: number
 ): NestingEdit[] {
-  const edits: NestingEdit[] = [];
-  const padding = ' '.repeat(width);
+  const section = sectionLines(lines, fenced, lineNumber);
+  const padding = indentUnit(lines, section) ?? ' '.repeat(width);
+
+  return section.map((line) => ({ line, fromColumn: 0, toColumn: 0, text: padding }));
+}
+
+/** The non-blank lines the heading at `lineNumber` holds, in document order. */
+function sectionLines(
+  lines: readonly string[],
+  fenced: readonly boolean[],
+  lineNumber: number
+): number[] {
+  const held: number[] = [];
 
   for (let line = lineNumber + 1; line < lines.length; line++) {
     const text = lines[line];
     if (!fenced[line] && HEADING_LINE.test(text)) {
       break;
     }
-    if (text.trim() === '') {
-      continue;
+    if (text.trim() !== '') {
+      held.push(line);
     }
-
-    edits.push({ line, fromColumn: 0, toColumn: 0, text: padding });
   }
 
-  return edits;
+  return held;
+}
+
+/**
+ * One level of nesting as this section writes it, or nothing when it is flat.
+ *
+ * The narrowest indent in the section rather than the first, because the first
+ * line under a heading can already be nested several levels deep while the
+ * narrowest is a single step by definition. Taken verbatim: a tab and four
+ * spaces are each one level, and which one this document means is not something
+ * to infer from a column count.
+ */
+function indentUnit(lines: readonly string[], section: readonly number[]): string | undefined {
+  let unit: string | undefined;
+
+  for (const line of section) {
+    const text = lines[line];
+    const indent = text.slice(0, leadingWidth(text));
+    if (indent !== '' && (unit === undefined || indent.length < unit.length)) {
+      unit = indent;
+    }
+  }
+
+  return unit;
 }
