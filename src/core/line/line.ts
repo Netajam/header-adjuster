@@ -1,10 +1,12 @@
 import type {
   AdjustmentOperation,
+  ConversionSettings,
   HeadingPlacement,
   LinePlacement,
 } from '../../contracts';
 import type { LeveledLine } from './placement';
 import { enclosingLevel, placedLevel } from './placement';
+import { indentSectionEdits, liftNestedEdits } from './nesting';
 import { listMarkerWidth } from './marker';
 
 /**
@@ -75,10 +77,19 @@ export function adjustLineLevel(
  * line whether it is already there, and is why the level goes to `placedLevel`
  * rather than being settled before `writeLine` is called.
  *
+ * Placing is also the only scope that may touch a line other than its own, and
+ * `nesting.ts` says why: a list item and a heading disagree about what sits
+ * under them, so a line crossing between the two leaves its content behind
+ * unless the content comes too. Which way it moves is read off the edit rather
+ * than worked out twice — the text written is the line's new opening, and a
+ * `#` there is the whole of what distinguishes the two directions.
+ *
  * @param above The headings preceding the line, nearest last. The last of them
  *   is the enclosing heading, and the whole of what a placement reads.
  * @param target Where a toggle is pointed, which the user chooses. Ignored by
  *   every other placement.
+ * @param conversion Whether the content under the line travels with it, and
+ *   what a removed heading leaves behind. Neither applies when omitted.
  */
 export function placeLineLevel(
   lines: readonly string[],
@@ -86,12 +97,38 @@ export function placeLineLevel(
   lineNumber: number,
   placement: LinePlacement,
   above: readonly LeveledLine[],
-  target: HeadingPlacement
+  target: HeadingPlacement,
+  conversion?: ConversionSettings
 ): LineLevelEdit[] {
   const enclosing = enclosingLevel(above);
-  return writeLine(lines, fenced, lineNumber, (level) =>
-    placedLevel(placement, enclosing, level, target)
+  const removeAs = conversion?.removeHeadingAs ?? 'plain';
+  const edits = writeLine(
+    lines,
+    fenced,
+    lineNumber,
+    (level) => placedLevel(placement, enclosing, level, target),
+    removeAs
   );
+
+  const opening = edits[0]?.text;
+  if (opening === undefined) {
+    return edits;
+  }
+
+  const line = lines[lineNumber] ?? '';
+
+  // Became a heading: whatever the line was holding as a list item is now
+  // indented under something that no longer encloses it.
+  if (opening.startsWith('#')) {
+    return conversion?.liftNestedOnHeading && listMarkerWidth(line) > 0
+      ? [...edits, ...liftNestedEdits(lines, lineNumber, line.length - line.trimStart().length)]
+      : edits;
+  }
+
+  // Became a list item: the section the heading held becomes its content.
+  return removeAs === 'bullet-with-section'
+    ? [...edits, ...indentSectionEdits(lines, fenced, lineNumber, opening.length)]
+    : edits;
 }
 
 /**
@@ -109,7 +146,8 @@ function writeLine(
   lines: readonly string[],
   fenced: readonly boolean[],
   lineNumber: number,
-  choose: (level: number) => number
+  choose: (level: number) => number,
+  removeAs: 'plain' | 'bullet' | 'bullet-with-section' = 'plain'
 ): LineLevelEdit[] {
   // A `#` inside a fence is text, and so is everything beside it: a line the
   // document reads as code is not one to write a heading onto.
@@ -130,7 +168,7 @@ function writeLine(
   // `#`s and their gap, or the marker of a list item at level zero.
   const written = match ? match[0].length : listMarkerWidth(line);
 
-  return [prefixEdit(lineNumber, level, written, target)];
+  return [prefixEdit(lineNumber, level, written, target, removeAs)];
 }
 
 /**
@@ -144,12 +182,15 @@ function prefixEdit(
   lineNumber: number,
   level: number,
   written: number,
-  target: number
+  target: number,
+  removeAs: 'plain' | 'bullet' | 'bullet-with-section'
 ): LineLevelEdit {
-  // Down to plain text: the gap goes with the `#`s, or the line keeps a space
-  // it never asked for.
+  // Down out of a heading: the gap goes with the `#`s, or the line keeps a
+  // space it never asked for. What replaces them is the user's choice — nothing
+  // at all, or the marker that puts the line back in a list.
   if (target === 0) {
-    return { line: lineNumber, fromColumn: 0, toColumn: written, text: '' };
+    const opening = removeAs === 'plain' ? '' : '- ';
+    return { line: lineNumber, fromColumn: 0, toColumn: written, text: opening };
   }
 
   // Up from plain text: the gap has to be written, and a list marker is an

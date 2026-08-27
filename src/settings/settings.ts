@@ -26,6 +26,12 @@ const DEFAULT_SETTINGS: HeadingAdjusterSettings = {
   // What the toggle did before it could be pointed anywhere else, so an
   // upgrade finds the command behaving exactly as it left it.
   toggleTarget: 'sibling',
+  // On: a heading that leaves its children stranded at an indent nothing
+  // encloses is broken markup, not a preference.
+  liftNestedOnHeading: true,
+  // What removing a heading has always written, so the command keeps meaning
+  // what its name says until the user asks for something else.
+  removeHeadingAs: 'plain',
   // The whole note, so the custom commands start out as a second copy of the
   // document commands rather than as something surprising.
   customRangeTop: 'note-start',

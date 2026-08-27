@@ -225,3 +225,126 @@ describe('toggling a heading on and off the current line', () => {
     assert.deepEqual(placeLineLevel(['# A'], [true], 0, 'toggle', [], 'sibling'), []);
   });
 });
+
+describe('content travelling with a line that crosses between the two', () => {
+  /**
+   * The one thing the current-line scope reads beyond its own line, and only
+   * because a list item and a heading disagree about what sits under them: an
+   * item holds what is indented past it, a heading holds what follows it. A
+   * line crossing between the two leaves what it held answering to nothing.
+   */
+  const LIFT = { headingsToBullets: false, bulletsToHeadings: false, liftNestedOnHeading: true };
+  const OFF = { headingsToBullets: false, bulletsToHeadings: false, liftNestedOnHeading: false };
+
+  /** The document as the edits would leave it. */
+  function placed(
+    lines: string[],
+    lineNumber: number,
+    placement: LinePlacement,
+    conversion?: typeof LIFT
+  ): string[] {
+    const edits = placeLineLevel(lines, [], lineNumber, placement, [], 'root', conversion);
+    const next = [...lines];
+    for (const edit of edits) {
+      next[edit.line] =
+        next[edit.line].slice(0, edit.fromColumn) + edit.text + next[edit.line].slice(edit.toColumn);
+    }
+    return next;
+  }
+
+  const NESTED = ['- A', '\t- B', '\t\t- C', '\t\t\t- D', '\t\t\t\t- E', '\t\t\t\t\t- etc'];
+
+  test('the items under a converted list item come out with it', () => {
+    assert.deepEqual(placed(NESTED, 3, 'toggle', LIFT), [
+      '- A', '\t- B', '\t\t- C', '# D', '- E', '\t- etc',
+    ]);
+  });
+
+  test('switched off, they stay where they were', () => {
+    assert.deepEqual(placed(NESTED, 3, 'toggle', OFF), [
+      '- A', '\t- B', '\t\t- C', '# D', '\t\t\t\t- E', '\t\t\t\t\t- etc',
+    ]);
+  });
+
+  test('the sibling and child placements carry the nesting too', () => {
+    assert.deepEqual(placed(NESTED, 3, 'sibling', LIFT).slice(3), ['# D', '- E', '\t- etc']);
+    assert.deepEqual(placed(NESTED, 3, 'child', LIFT).slice(3), ['# D', '- E', '\t- etc']);
+  });
+
+  test('the block ends at the first line no deeper than the item', () => {
+    const lines = ['\t- D', '\t\t- E', '\t- sibling', '\t\t- its child'];
+
+    assert.deepEqual(placed(lines, 0, 'toggle', LIFT), [
+      '# D', '- E', '\t- sibling', '\t\t- its child',
+    ]);
+  });
+
+  test('a blank line does not end it — a list with a gap is still one list', () => {
+    const lines = ['- D', '\t- E', '', '\t- F'];
+
+    assert.deepEqual(placed(lines, 0, 'toggle', LIFT), ['# D', '- E', '', '- F']);
+  });
+
+  test('a line that is not a list item has nothing nested to carry', () => {
+    const lines = ['Some prose', '\t- E'];
+
+    assert.deepEqual(placed(lines, 0, 'toggle', LIFT), ['# Some prose', '\t- E']);
+  });
+
+  test('an item holding nothing is written on its own', () => {
+    assert.deepEqual(placed(['\t- D', '- after'], 0, 'toggle', LIFT), ['# D', '- after']);
+  });
+});
+
+describe('what a removed heading leaves behind', () => {
+  const PLAIN = { headingsToBullets: false, bulletsToHeadings: false, removeHeadingAs: 'plain' as const };
+  const BULLET = { headingsToBullets: false, bulletsToHeadings: false, removeHeadingAs: 'bullet' as const };
+  const SECTION = {
+    headingsToBullets: false,
+    bulletsToHeadings: false,
+    removeHeadingAs: 'bullet-with-section' as const,
+  };
+
+  function removed(lines: string[], conversion?: object): string[] {
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const edits = placeLineLevel(lines, [], 0, 'plain', [], 'root', conversion as any);
+    const next = [...lines];
+    for (const edit of edits) {
+      next[edit.line] =
+        next[edit.line].slice(0, edit.fromColumn) + edit.text + next[edit.line].slice(edit.toColumn);
+    }
+    return next;
+  }
+
+  const SECTIONED = ['# D', '- E', '\t- etc', '# Next', '- untouched'];
+
+  test('plain text, which is what it always wrote', () => {
+    assert.deepEqual(removed(SECTIONED, PLAIN), ['D', '- E', '\t- etc', '# Next', '- untouched']);
+  });
+
+  test('the same with no conversion passed at all', () => {
+    assert.deepEqual(removed(SECTIONED), ['D', '- E', '\t- etc', '# Next', '- untouched']);
+  });
+
+  test('a list item, leaving what followed where it was', () => {
+    assert.deepEqual(removed(SECTIONED, BULLET), [
+      '- D', '- E', '\t- etc', '# Next', '- untouched',
+    ]);
+  });
+
+  test('a list item holding the section the heading held', () => {
+    assert.deepEqual(removed(SECTIONED, SECTION), [
+      '- D', '  - E', '  \t- etc', '# Next', '- untouched',
+    ]);
+  });
+
+  test('the section stops at the next heading, whatever its level', () => {
+    const lines = ['## D', 'body', '###### Deeper', 'after'];
+
+    assert.deepEqual(removed(lines, SECTION), ['- D', '  body', '###### Deeper', 'after']);
+  });
+
+  test('a blank line inside the section is left blank rather than padded', () => {
+    assert.deepEqual(removed(['# D', '', 'body'], SECTION), ['- D', '', '  body']);
+  });
+});

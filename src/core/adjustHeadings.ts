@@ -121,11 +121,12 @@ export function placeLineHeading(
   lines: readonly string[],
   lineNumber: number,
   placement: LinePlacement,
-  target: HeadingPlacement = 'sibling'
+  target: HeadingPlacement = 'sibling',
+  conversion?: ConversionSettings
 ): AdjustmentOutcome {
   const fenced = computeFencedLines(lines);
   const above = parseHeadings(lines, 0, lineNumber - 1, fenced);
-  const edits = placeLineLevel(lines, fenced, lineNumber, placement, above, target);
+  const edits = placeLineLevel(lines, fenced, lineNumber, placement, above, target, conversion);
 
   return { status: 'adjusted', edits, changedCount: edits.length, truncatedSections: 0 };
 }

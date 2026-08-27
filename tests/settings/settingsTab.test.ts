@@ -97,7 +97,7 @@ describe('getSettingDefinitions', () => {
 
     assert.deepEqual(
       groups.map((group) => ('heading' in group ? group.heading : undefined)),
-      ['Default shift', 'Custom range', 'Toggle heading on current line', 'Bullet conversion']
+      ['Default shift', 'Custom range', 'Placing a heading on the current line', 'Bullet conversion']
     );
   });
 

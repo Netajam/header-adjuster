@@ -140,7 +140,7 @@ export function placeCurrentLine(
   if (editor) {
     // Asked for now rather than when the command was registered, so a setting
     // changed mid-session takes effect without a reload.
-    placeEditorLine(editor, placement, context.toggleTarget());
+    placeEditorLine(editor, placement, context.toggleTarget(), context.conversion());
   }
 }
 

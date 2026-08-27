@@ -1,6 +1,8 @@
 import { describe, test } from 'node:test';
 import { strict as assert } from 'node:assert';
 
+const NO_CONVERSION = { headingsToBullets: false, bulletsToHeadings: false };
+
 import {
   adjustEditorHeadings,
   adjustEditorLine,
@@ -205,7 +207,7 @@ describe('a placement reads the cursor too', () => {
     const before = ['## A', 'some prose', '### C'];
     const editor = fakeEditor([...before], 1);
 
-    placeEditorLine(asEditor(editor), 'child', 'sibling');
+    placeEditorLine(asEditor(editor), 'child', 'sibling', NO_CONVERSION);
 
     assert.equal(written(editor, before), '## A\n### some prose\n### C');
   });
@@ -214,7 +216,7 @@ describe('a placement reads the cursor too', () => {
     const before = ['## A', '#### B'];
     const editor = fakeEditor([...before], 1);
 
-    placeEditorLine(asEditor(editor), 'plain', 'sibling');
+    placeEditorLine(asEditor(editor), 'plain', 'sibling', NO_CONVERSION);
 
     assert.equal(written(editor, before), '## A\nB');
   });
@@ -223,7 +225,7 @@ describe('a placement reads the cursor too', () => {
     const before = ['## A', '### B'];
     const editor = fakeEditor([...before], 1);
 
-    placeEditorLine(asEditor(editor), 'child', 'sibling');
+    placeEditorLine(asEditor(editor), 'child', 'sibling', NO_CONVERSION);
 
     assert.deepEqual(editor.transactions, []);
   });
@@ -242,7 +244,7 @@ describe('the caret after writing a heading onto the current line', () => {
   test('waits after the hash on an empty line, ready to be typed into', () => {
     const editor = fakeEditor(['## Setup', ''], 1, 0);
 
-    placeEditorLine(asEditor(editor), 'toggle', 'sibling');
+    placeEditorLine(asEditor(editor), 'toggle', 'sibling', NO_CONVERSION);
 
     assert.equal(written(editor, ['## Setup', '']), '## Setup\n## ');
     assert.deepEqual(caret(editor), { line: 1, ch: 3 });
@@ -251,7 +253,7 @@ describe('the caret after writing a heading onto the current line', () => {
   test('stays with its text on a line that has some', () => {
     const editor = fakeEditor(['## Setup', 'some prose'], 1, 5);
 
-    placeEditorLine(asEditor(editor), 'toggle', 'sibling');
+    placeEditorLine(asEditor(editor), 'toggle', 'sibling', NO_CONVERSION);
 
     // `some |prose` before, `## some |prose` after: the same character.
     assert.deepEqual(caret(editor), { line: 1, ch: 8 });
@@ -260,7 +262,7 @@ describe('the caret after writing a heading onto the current line', () => {
   test('is not pushed behind the markup when it sits at the head of the line', () => {
     const editor = fakeEditor(['## Setup', 'some prose'], 1, 0);
 
-    placeEditorLine(asEditor(editor), 'toggle', 'sibling');
+    placeEditorLine(asEditor(editor), 'toggle', 'sibling', NO_CONVERSION);
 
     assert.deepEqual(caret(editor), { line: 1, ch: 3 });
   });
@@ -268,7 +270,7 @@ describe('the caret after writing a heading onto the current line', () => {
   test('comes back with the text when the heading is taken off', () => {
     const editor = fakeEditor(['## Setup', '## some prose'], 1, 6);
 
-    placeEditorLine(asEditor(editor), 'toggle', 'sibling');
+    placeEditorLine(asEditor(editor), 'toggle', 'sibling', NO_CONVERSION);
 
     // `## som|e prose` before, `som|e prose` after.
     assert.equal(written(editor, ['## Setup', '## some prose']), '## Setup\nsome prose');
