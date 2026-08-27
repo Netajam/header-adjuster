@@ -374,3 +374,52 @@ describe('the custom-range commands', () => {
     assert.deepEqual(editor.transactions, []);
   });
 });
+
+describe('a placement command asks the plugin for the conversion', () => {
+  /**
+   * The same gap the rest of this file guards: `CommandContext` hands back
+   * answers rather than the settings object, so a placement that forgot to ask
+   * would compile and quietly do nothing about the content under the line.
+   */
+  test('the nested items move, which only happens if the setting arrived', () => {
+    const before = ['- A', '\t- B', '\t\t- C'];
+    const editor = fakeEditor([...before], [], 1);
+    const context = fakeContext(editor, {
+      headingsToBullets: false,
+      bulletsToHeadings: false,
+      liftNestedOnHeading: true,
+    });
+
+    placeCurrentLine(context, 'toggle');
+
+    assert.equal(written(editor, before), '- A\n# B\n- C');
+  });
+
+  test('with it switched off the same command writes only its own line', () => {
+    const before = ['- A', '\t- B', '\t\t- C'];
+    const editor = fakeEditor([...before], [], 1);
+    const context = fakeContext(editor, {
+      headingsToBullets: false,
+      bulletsToHeadings: false,
+      liftNestedOnHeading: false,
+    });
+
+    placeCurrentLine(context, 'toggle');
+
+    assert.equal(written(editor, before), '- A\n# B\n\t\t- C');
+  });
+
+  test('what a removed heading leaves comes from the plugin too', () => {
+    const before = ['# A', 'body'];
+    const editor = fakeEditor([...before], [], 0);
+    const context = fakeContext(editor, {
+      headingsToBullets: false,
+      bulletsToHeadings: false,
+      removeHeadingAs: 'bullet-with-section',
+    });
+
+    placeCurrentLine(context, 'plain');
+
+    assert.equal(written(editor, before), '- A\n  body');
+  });
+});

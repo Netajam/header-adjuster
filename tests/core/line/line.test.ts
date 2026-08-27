@@ -347,4 +347,21 @@ describe('what a removed heading leaves behind', () => {
   test('a blank line inside the section is left blank rather than padded', () => {
     assert.deepEqual(removed(['# D', '', 'body'], SECTION), ['- D', '', '  body']);
   });
+
+  /**
+   * A `#` inside a fence is code, not a heading, so it does not end the section
+   * the item is taking with it.
+   */
+  test('a hash inside a code fence does not end the section', () => {
+    const lines = ['# D', '```', '# not a heading', '```', 'after'];
+    const fenced = [false, false, true, false, false];
+    const edits = placeLineLevel(lines, fenced, 0, 'plain', [], 'root', SECTION);
+    const next = [...lines];
+    for (const edit of edits) {
+      next[edit.line] =
+        next[edit.line].slice(0, edit.fromColumn) + edit.text + next[edit.line].slice(edit.toColumn);
+    }
+
+    assert.deepEqual(next, ['- D', '  ```', '  # not a heading', '  ```', '  after']);
+  });
 });
