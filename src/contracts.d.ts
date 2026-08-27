@@ -64,6 +64,24 @@ export interface ConversionSettings {
   /** On decrease, turn list items back into headings. See docs/adr/0001. */
   bulletsToHeadings: boolean;
   /**
+   * When a placement writes a heading onto a list item, lift the items nested
+   * under it by as much as the item itself lost.
+   *
+   * Without it a deeply nested item leaves its children behind at their old
+   * indent, under a heading that no longer encloses them — which CommonMark
+   * reads as an indented code block rather than a list.
+   */
+  liftNestedOnHeading?: boolean;
+  /**
+   * What a placement writes where a heading used to be.
+   *
+   * `plain` is the text on its own. The other two put the line back in a list,
+   * and `bullet-with-section` carries the heading's section in with it, so the
+   * lines the heading held become the item's children rather than its
+   * siblings.
+   */
+  removeHeadingAs?: 'plain' | 'bullet' | 'bullet-with-section';
+  /**
    * The deepest level a heading may occupy before it converts to a bullet, and
    * the level a bullet converts back to. Markdown's own limit of six when
    * omitted, which is the setting doing nothing.

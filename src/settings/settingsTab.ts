@@ -92,6 +92,11 @@ export class HeadingAdjusterSettingTab extends PluginSettingTab {
    * rather than read. `store` is shared: the three components hand back three
    * different types and `setControlValue` is what decides which are real, so
    * there is nothing per-kind to say here.
+   *
+   * Two settings read back optional, because core takes them through the narrow
+   * `ConversionSettings` where they may be left out. `readSettings` fills every
+   * key from the defaults, so the fallbacks below never fire in the app — they
+   * are what lets the types say that without a cast.
    */
   private draw(setting: Setting, control: ControlDefinition['control']): void {
     const store = (value: unknown) => void this.setControlValue(control.key, value);
@@ -111,14 +116,14 @@ export class HeadingAdjusterSettingTab extends PluginSettingTab {
       setting.addDropdown((dropdown) =>
         dropdown
           .addOptions(control.options)
-          .setValue(this.host.settings[control.key])
+          .setValue(this.host.settings[control.key] ?? Object.keys(control.options)[0])
           .onChange(store)
       );
       return;
     }
 
     setting.addToggle((toggle) =>
-      toggle.setValue(this.host.settings[control.key]).onChange(store)
+      toggle.setValue(this.host.settings[control.key] ?? false).onChange(store)
     );
   }
 }
@@ -147,6 +152,10 @@ function storeOption(
   }
   if (key === 'customRangeBottom' && value in OPTIONS.customRangeBottom) {
     settings.customRangeBottom = value as HeadingAdjusterSettings['customRangeBottom'];
+    return true;
+  }
+  if (key === 'removeHeadingAs' && value in OPTIONS.removeHeadingAs) {
+    settings.removeHeadingAs = value as HeadingAdjusterSettings['removeHeadingAs'];
     return true;
   }
   return false;

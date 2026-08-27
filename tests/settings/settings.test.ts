@@ -18,6 +18,8 @@ describe('defaultLevelFor', () => {
       bulletsToHeadings: false,
       deepestHeadingLevel: 6,
       toggleTarget: 'sibling',
+      liftNestedOnHeading: true,
+      removeHeadingAs: 'plain',
       customRangeTop: 'note-start',
       customRangeBottom: 'note-end',
     };
@@ -36,6 +38,8 @@ describe('readSettings', () => {
       bulletsToHeadings: false,
       deepestHeadingLevel: 6,
       toggleTarget: 'sibling',
+      liftNestedOnHeading: true,
+      removeHeadingAs: 'plain',
       customRangeTop: 'note-start',
       customRangeBottom: 'note-end',
     });
@@ -56,6 +60,8 @@ describe('readSettings', () => {
       bulletsToHeadings: false,
       deepestHeadingLevel: 6,
       toggleTarget: 'sibling',
+      liftNestedOnHeading: true,
+      removeHeadingAs: 'plain',
       customRangeTop: 'note-start',
       customRangeBottom: 'note-end',
     });

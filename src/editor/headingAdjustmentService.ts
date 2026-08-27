@@ -93,13 +93,14 @@ export function adjustEditorLine(
 export function placeEditorLine(
   editor: Editor,
   placement: LinePlacement,
-  target: HeadingPlacement
+  target: HeadingPlacement,
+  conversion: ConversionSettings
 ): void {
   const line = cursorLine(editor);
 
   applyOutcome(
     editor,
-    placeLineHeading(readEditorLines(editor), line, placement, target),
+    placeLineHeading(readEditorLines(editor), line, placement, target, conversion),
     line
   );
 }

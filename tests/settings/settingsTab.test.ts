@@ -97,7 +97,7 @@ describe('getSettingDefinitions', () => {
 
     assert.deepEqual(
       groups.map((group) => ('heading' in group ? group.heading : undefined)),
-      ['Default shift', 'Custom range', 'Toggle heading on current line', 'Bullet conversion']
+      ['Default shift', 'Custom range', 'Placing a heading on the current line', 'Bullet conversion']
     );
   });
 
@@ -293,5 +293,59 @@ describe('the custom range boundaries', () => {
 
     assert.equal(settings.customRangeTop, 'note-start');
     assert.deepEqual(saves, []);
+  });
+});
+
+describe('what a removed heading leaves', () => {
+  test('offers exactly the three things it can write', async () => {
+    const { tab } = tabFor(await defaults());
+    const control = controls(tab).find((each) => each.key === 'removeHeadingAs');
+
+    assert.ok(control && control.type === 'dropdown');
+    assert.deepEqual(Object.keys(control.options), ['plain', 'bullet', 'bullet-with-section']);
+  });
+
+  test('a fresh install writes plain text, which is what it always wrote', async () => {
+    assert.equal((await defaults()).removeHeadingAs, 'plain');
+  });
+
+  test('a chosen option is stored and persisted', async () => {
+    const settings = await defaults();
+    const { tab, saves } = tabFor(settings);
+
+    await tab.setControlValue('removeHeadingAs', 'bullet-with-section');
+
+    assert.equal(settings.removeHeadingAs, 'bullet-with-section');
+    assert.equal(saves.length, 1);
+  });
+
+  test('a string it does not offer is refused rather than stored', async () => {
+    const settings = await defaults();
+    const { tab, saves } = tabFor(settings);
+
+    await tab.setControlValue('removeHeadingAs', 'a numbered item');
+
+    assert.equal(settings.removeHeadingAs, 'plain');
+    assert.deepEqual(saves, [], 'nothing was written, so nothing is persisted');
+  });
+});
+
+describe('bringing nested list items along', () => {
+  /**
+   * On rather than off: a heading that strands its children at an indent
+   * nothing encloses is broken markup, not a preference.
+   */
+  test('a fresh install has it switched on', async () => {
+    assert.equal((await defaults()).liftNestedOnHeading, true);
+  });
+
+  test('switching it off is stored and persisted', async () => {
+    const settings = await defaults();
+    const { tab, saves } = tabFor(settings);
+
+    await tab.setControlValue('liftNestedOnHeading', false);
+
+    assert.equal(settings.liftNestedOnHeading, false);
+    assert.equal(saves.length, 1);
   });
 });

@@ -206,6 +206,58 @@ definition of a list item across every command. Removing a heading never writes
 a bullet back, either — Markdown records no provenance for the marker it
 replaced, so there is nothing to restore.
 
+### Crossing between a heading and a list item
+
+A list item holds whatever is indented past it; a heading holds whatever follows
+it until the next heading. They disagree about what sits underneath, so a line
+that stops being one and starts being the other leaves its content answering to
+nothing.
+
+**Turning a list item into a heading** — with "Toggle heading", "Sibling of the
+heading above" or "Child of the heading above" — brings the items nested under
+it along, by as much as the item itself lost:
+
+```markdown
+- A                    - A
+  - B                    - B
+    - C                    - C
+      - D    ← caret    # D
+        - E              - E
+          - etc            - etc
+```
+
+Left where they were, those children sit at an indent nothing encloses any
+more — which CommonMark reads as a code block rather than a list. **Bring nested
+list items along** is on by default for that reason; switch it off to write only
+the line the caret is on.
+
+The block ends at the first line indented no further than the item itself, so a
+sibling further down and everything under it stay put. A blank line does not end
+it. A line that is not a list item has nothing nested to carry, so a paragraph
+turned into a heading is written on its own.
+
+**Removing a heading** goes the other way, and ships doing what it always did:
+writing the text on its own. **Removing a heading leaves** can instead put the
+line back in a list, either on its own or carrying the section the heading held:
+
+| Setting | `# D` followed by `- E` becomes |
+| --- | --- |
+| Plain text *(default)* | `D` / `- E` |
+| A list item | `- D` / `- E` |
+| A list item, with the section nested under it | `- D` / `  - E` |
+
+The section ends where the heading's does — at the next heading, whatever its
+level. It moves as one block, so its own nesting is untouched, and it moves by
+one level in whatever the section already indents by: a tab-nested list gets a
+tab, a four-space one gets four spaces. A section with no nesting to go on
+takes the width of the marker instead.
+
+The round trip does not close on depth: a heading remembers nothing about how
+far the item it came from was indented, so an item lifted out of four levels of
+nesting comes back at the top level. Markdown records no provenance for that,
+which is the same limit [ADR-0001](docs/adr/0001-bullet-to-heading-reversal-is-marker-blind-and-opt-in.md)
+describes.
+
 ### The custom range
 
 The five other scopes each name their range in their own command name, which is
@@ -253,6 +305,13 @@ conversion**:
 - **Toggle puts the heading at**: Which level "Toggle heading on current line"
   writes, and so which level it takes back off — the top level (`#`), the same
   level as the heading above, or one below it. Defaults to the same level.
+- **Bring nested list items along**: When a placement turns a list item into a
+  heading, move the items nested under it out by as much as it lost. On by
+  default — see [Crossing between a heading and a list
+  item](#crossing-between-a-heading-and-a-list-item).
+- **Removing a heading leaves**: What "Remove heading from current line", and a
+  toggle switching one off, writes in its place — plain text (the default), a
+  list item, or a list item with the heading's section nested under it.
 - **Custom range: top**: Where the two "custom range" commands start — the top
   of the note, or the cursor line. See [The custom range](#the-custom-range).
 - **Custom range: bottom**: Where the same two commands stop — the cursor line,

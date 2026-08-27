@@ -33,7 +33,7 @@ const RANGE = {
 type LevelKey = 'increaseLevel' | 'decreaseLevel' | 'deepestHeadingLevel';
 
 /** The settings a toggle can be bound to. */
-type ToggleKey = 'headingsToBullets' | 'bulletsToHeadings';
+type ToggleKey = 'headingsToBullets' | 'bulletsToHeadings' | 'liftNestedOnHeading';
 
 /**
  * Every dropdown's options, in the user's words, keyed by the setting they
@@ -59,6 +59,11 @@ export const OPTIONS = {
     cursor: 'Cursor line',
     'note-end': 'End of the note',
   } satisfies Record<HeadingAdjusterSettings['customRangeBottom'], string>,
+  removeHeadingAs: {
+    plain: 'Plain text',
+    bullet: 'A list item',
+    'bullet-with-section': 'A list item, with the section nested under it',
+  } satisfies Record<NonNullable<HeadingAdjusterSettings['removeHeadingAs']>, string>,
 };
 
 /**
@@ -129,7 +134,7 @@ export const SETTINGS: SettingSection[] = [
     ],
   },
   {
-    heading: 'Toggle heading on current line',
+    heading: 'Placing a heading on the current line',
     items: [
       {
         name: 'Toggle puts the heading at',
@@ -140,6 +145,26 @@ export const SETTINGS: SettingSection[] = [
           type: 'dropdown',
           key: 'toggleTarget',
           options: OPTIONS.toggleTarget,
+        },
+      },
+      {
+        name: 'Bring nested list items along',
+        desc: 'When "Toggle heading", "Sibling of the heading above" or "Child of the '
+          + 'heading above" turns a list item into a heading, move the items nested '
+          + 'under it out by as much as it lost. Without this they stay at their old '
+          + 'indent under a heading that no longer encloses them.',
+        control: { type: 'toggle', key: 'liftNestedOnHeading' },
+      },
+      {
+        name: 'Removing a heading leaves',
+        desc: 'What "Remove heading from current line" — and a toggle switching one '
+          + 'off — writes in its place. The last option also indents the lines the '
+          + 'heading held, so they become the new item\'s content rather than its '
+          + 'siblings.',
+        control: {
+          type: 'dropdown',
+          key: 'removeHeadingAs',
+          options: OPTIONS.removeHeadingAs,
         },
       },
     ],
